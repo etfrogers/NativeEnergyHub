@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="neutral">#000000</color>
+    <color name="inactive">#B2B2B2</color>
+    <color name="eco">#00CC00</color>
+    <color name="non_eco">#FF8000</color>
+</resources>
