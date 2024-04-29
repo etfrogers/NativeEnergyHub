@@ -1,0 +1,27 @@
+package com.example.energyhub.ui.nav
+
+import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import com.example.energyhub.ui.screens.CurrentStatusScreen
+import com.example.energyhub.ui.screens.HistoryScreen
+import com.example.energyhub.ui.screens.PlanningScreen
+
+
+@Composable
+fun Navigation(
+    navController: NavHostController
+) {
+    NavHost(navController, startDestination = NavigationItem.CurrentStatus.route) {
+        composable(NavigationItem.CurrentStatus.route) {
+            CurrentStatusScreen()
+        }
+        composable(NavigationItem.History.route) {
+            HistoryScreen()
+        }
+        composable(NavigationItem.Planning.route) {
+            PlanningScreen()
+        }
+    }
+}

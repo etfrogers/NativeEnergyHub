@@ -63,6 +63,7 @@ dependencies {
     // To use constraintlayout in compose
     implementation(libs.androidx.constraintlayout.compose)
     implementation(libs.androidx.graphics.shapes.android)
+    implementation(libs.androidx.navigation.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
