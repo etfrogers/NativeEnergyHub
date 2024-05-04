@@ -2,20 +2,15 @@ import androidx.navigation.NavController
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Color.Companion.Black
-import androidx.compose.ui.graphics.Color.Companion.Blue
+import androidx.compose.ui.graphics.Color.Companion.Red
 import androidx.compose.ui.graphics.Color.Companion.Gray
-import androidx.compose.ui.graphics.Color.Companion.Green
-import androidx.compose.ui.graphics.Color.Companion.Yellow
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.painterResource
 import com.example.energyhub.ui.nav.NavigationItem
 
 
@@ -42,7 +37,7 @@ fun BottomNavigationBar( navController: NavController){
             NavigationBarItem(
 
                 alwaysShowLabel = true,
-                icon = { Icon(item.icon!!, contentDescription = item.route) },
+                icon = { Icon(painterResource(id = item.icon), contentDescription = item.route) },
 //                label = { Text(item.title, overflow = TextOverflow.Ellipsis, maxLines = 1) },
                 selected = selectedItem == index,
                 onClick = {
@@ -64,8 +59,8 @@ fun BottomNavigationBar( navController: NavController){
 //                        unselectedIconColor = AppDefaults.navigationContentColor(),
 //                        unselectedTextColor = AppDefaults.navigationContentColor(),
 //                        indicatorColor = AppDefaults.navigationIndicatorColor()
-                        selectedTextColor = Blue,
-                        selectedIconColor = Blue,
+                        selectedTextColor = Red,
+                        selectedIconColor = Red,
                         unselectedTextColor = Gray,
                         )
 
