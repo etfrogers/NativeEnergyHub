@@ -9,12 +9,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import com.example.energyhub.model.SolarEdgeModel
 import com.example.energyhub.ui.theme.EnergyHubTheme
 
 @Composable
 fun CurrentStatusScreen () {
     Column {
         CenterText(text = "Current Status")
+        val solarEdgeText = SolarEdgeModel().client.getString()
+        CenterText(text = solarEdgeText)
     }
 }
 
@@ -29,7 +32,7 @@ fun PreviewCurrentStatus() {
 @Composable
 fun CenterText(text: String) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+//        modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

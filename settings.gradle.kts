@@ -1,3 +1,7 @@
+
+include(":ksemodule")
+project(":ksemodule").projectDir = File(settingsDir, "../KSolarEdge/ksemodule")
+
 pluginManagement {
     repositories {
         google {
