@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.serialisation)
 }
 
 android {
@@ -65,6 +66,8 @@ dependencies {
     implementation(libs.androidx.graphics.shapes.android)
     implementation(libs.androidx.navigation.compose)
     implementation(project(":ksemodule"))
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
+    implementation("com.charleskorn.kaml:kaml:0.59.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

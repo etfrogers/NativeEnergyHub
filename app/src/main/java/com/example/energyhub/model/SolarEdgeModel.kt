@@ -1,30 +1,12 @@
 package com.example.energyhub.model
 
-//import ninja.codingsolutions.solaredgeapiclient.SolarEdgeClientFactory
-//import java.net.http.HttpClient
-import com.etfrogers.ksolaredge.SolarEdgeClient
+import com.etfrogers.ksolaredge.SolarEdgeApi
+import com.etfrogers.ksolaredge.SolarEdgeApiService
+import com.etfrogers.ksolaredge.serialisers.SitePowerFlow
 
-class SolarEdgeModel (
-    val client: SolarEdgeClient = SolarEdgeClient()
-)
-
-
-/*
-val factory = SolarEdgeClientFactory
-.builder()
-.apiKey("YOUR_API_KEY")
-.apiUrl("https://monitoringapi.solaredge.com")
-.httpClient(HttpClient.newHttpClient())
-.build();
-
-val client = factory.buildClient();
-
-CompletableFuture<OverviewResponse> future = client.getOverviewResponse(YOUR_SITE_NUMBER)
-.toCompletableFuture();
-
-future.thenAcceptAsync(resp -> {
-    System.out.println(String.format("Your solar panels are generating %s w/h of power",
-        resp.getOverview().getCurrentPower().getPower()));
-});
-future.join();
-*/
+class SolarEdgeModel (siteID: String, apiKey: String) {
+    private val service: SolarEdgeApiService = SolarEdgeApi(siteID, apiKey).retrofitService
+    suspend fun getCurrentPowerFlow(): SitePowerFlow {
+        return service.getPowerFlow()
+    }
+}
