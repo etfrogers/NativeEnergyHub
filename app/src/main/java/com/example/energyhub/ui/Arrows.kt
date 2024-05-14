@@ -165,7 +165,8 @@ fun PowerLabel(
     unit: String = "kW",
     conversionFactor: Float = 1/1000f,
     decimalPlaces: Int = 2,
-    vertical: Boolean = false
+    vertical: Boolean = false,
+    modifier: Modifier = Modifier,
 ){
     val labelSep = (if (vertical) '\n' else ' ')
     val unitLabel = labelSep + unit
@@ -174,6 +175,7 @@ fun PowerLabel(
         text = "$valueString$unitLabel",
         style = typography.labelLarge,
         textAlign = TextAlign.Center,
+        modifier = modifier,
     )
 }
 
