@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -26,7 +30,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.energyhub.R
 import com.example.energyhub.model.BatteryChargeState
 import com.example.energyhub.model.EcoState
@@ -40,8 +43,12 @@ import com.example.energyhub.ui.theme.EnergyHubTheme
 fun CurrentStatusScreen(
     statusViewModel: StatusViewModel = StatusViewModel(seModel = SystemModel.solarEdgeModel)
 ){
-    statusViewModel.refresh()
     val statusUiState = statusViewModel.uiState.collectAsState()
+    var firstRun by remember { mutableStateOf(true) }
+    if (firstRun) {
+        statusViewModel.refresh()
+        firstRun = false
+    }
     CurrentStatusLayout(statusUiState.value)
 }
 
