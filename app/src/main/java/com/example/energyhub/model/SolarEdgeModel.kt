@@ -10,65 +10,64 @@ enum class BatteryChargeState {
     HIGH, MEDIUM, LOW
 }
 
+class SolarStatus (
+    var solarProduction: Float = 0f,
+    var batteryProduction: Float = 0f,
+    var gridPower: Float = 0f,
+    var isGridExporting: Boolean = false,
+    var batteryLevel: Int = 0,
+    var load: Float = 0f,
+    var batteryState: String = "Charging",
+){
+    val batteryChargeState: BatteryChargeState
+        get() = when {
+            batteryLevel > 80 -> BatteryChargeState.HIGH
+            batteryLevel > 40 -> BatteryChargeState.MEDIUM
+            else -> BatteryChargeState.LOW
+        }
+
+    val isBatteryCharging: Boolean
+        get() = batteryState == "Charging"
+
+    val loadStatus: EcoState
+        get() = getLoadStatusFun()
+
+    private fun getLoadStatusFun(): EcoState {
+        val usingGrid = gridPower > 0 && !isGridExporting
+        val generatingSolar = solarProduction > 0
+        val usingBattery = batteryProduction > 0 && batteryState != "Charging"
+        val ecoGeneration = generatingSolar || usingBattery
+
+        return when {
+            ecoGeneration && !usingGrid -> EcoState.ECO
+            ecoGeneration -> EcoState.MIXED
+            else -> EcoState.GRID
+        }
+    }
+}
+
 class SolarEdgeModel (siteID: String, apiKey: String) : BaseModel() {
     private val service: SolarEdgeApiService = SolarEdgeApi(siteID, apiKey).retrofitService
     private lateinit var powerFlowData: FlowData
-    val status = Status
-    companion object Status {
-        var solarProduction: Float = 0f
-        var batteryProduction: Float = 0f
-        var gridPower: Float = 0f
-        var isGridExporting: Boolean = false
-        var batteryLevel: Int = 0
-        var load: Float = 0f
-        var batteryState: String = "Charging"
-
-        val batteryChargeState: BatteryChargeState
-            get() = when {
-                batteryLevel > 80 -> BatteryChargeState.HIGH
-                batteryLevel > 40 -> BatteryChargeState.MEDIUM
-                else -> BatteryChargeState.LOW
-            }
-
-        val loadStatus: EcoState
-            get() = getLoadStatusFun()
-
-        val isBatteryCharging: Boolean
-            get() = batteryState == "Charging"
-
-        private fun getLoadStatusFun(): EcoState {
-            val usingGrid = gridPower > 0 && !isGridExporting
-            val generatingSolar = solarProduction > 0
-            val usingBattery = batteryProduction > 0 && batteryState != "Charging"
-            val ecoGeneration = generatingSolar || usingBattery
-
-            return when {
-                ecoGeneration && !usingGrid -> EcoState.ECO
-                ecoGeneration -> EcoState.MIXED
-                else -> EcoState.GRID
-            }
-        }
-
-    }
-
 
 //    @popup_on_error('SolarEdge', cleanup_function=BaseModel._finish_refresh)
-    suspend fun refresh() {
+    suspend fun refresh(): SolarStatus {
         powerFlowData = getCurrentPowerFlow().siteCurrentPowerFlow
         val conversionFactor = 1000
         if (powerFlowData.unit != "kW") {
             throw NotImplementedError()
         }
-
-        batteryProduction = powerFlowData.storage.currentPower * conversionFactor
-        batteryLevel = powerFlowData.storage.chargeLevel
-        batteryState = powerFlowData.storage.status
-        solarProduction = powerFlowData.pv.currentPower * conversionFactor
-        gridPower = powerFlowData.grid.currentPower * conversionFactor
-        load = powerFlowData.load.currentPower * conversionFactor
-        isGridExporting = Connection(from = "LOAD", to = "Grid") in powerFlowData.connections
+        return SolarStatus(
+            batteryProduction = powerFlowData.storage.currentPower * conversionFactor,
+            batteryLevel = powerFlowData.storage.chargeLevel,
+            batteryState = powerFlowData.storage.status,
+            solarProduction = powerFlowData.pv.currentPower * conversionFactor,
+            gridPower = powerFlowData.grid.currentPower * conversionFactor,
+            load = powerFlowData.load.currentPower * conversionFactor,
+            isGridExporting = Connection(from = "LOAD", to = "Grid") in powerFlowData.connections,
+        )
     }
-    suspend fun getCurrentPowerFlow(): SitePowerFlow {
+    private suspend fun getCurrentPowerFlow(): SitePowerFlow {
         return service.getPowerFlow()
     }
 }

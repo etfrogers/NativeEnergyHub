@@ -1,10 +1,6 @@
 package com.example.energyhub.ui.screens
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.etfrogers.ksolaredge.serialisers.SitePowerFlow
-import com.example.energyhub.R
 import com.example.energyhub.model.BatteryChargeState
 import com.example.energyhub.model.EcoState
 import com.example.energyhub.model.SolarEdgeModel
@@ -26,18 +22,18 @@ class StatusViewModel(
 
     private fun getCurrentPower() {
         viewModelScope.launch {
-            seModel.refresh()
+            val status = seModel.refresh()
             _uiState.update { currentState ->
                 currentState.copy(
-                    solarProduction = seModel.status.solarProduction,
-                    batteryProduction = seModel.status.batteryProduction,
-                    gridPower = seModel.status.gridPower,
-                    isGridExporting = seModel.status.isGridExporting,
-                    batteryLevel = seModel.status.batteryLevel,
-                    load = seModel.status.load,
-                    isBatteryCharging = seModel.status.isBatteryCharging,
-                    batteryChargeState = seModel.status.batteryChargeState,
-                    loadStatus = seModel.status.loadStatus,
+                    solarProduction = status.solarProduction,
+                    batteryProduction = status.batteryProduction,
+                    gridPower = status.gridPower,
+                    isGridExporting = status.isGridExporting,
+                    batteryLevel = status.batteryLevel,
+                    load = status.load,
+                    isBatteryCharging = status.isBatteryCharging,
+                    batteryChargeState = status.batteryChargeState,
+                    loadStatus = status.loadStatus,
                 )
             }
         }
