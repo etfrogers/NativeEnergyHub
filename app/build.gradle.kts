@@ -66,6 +66,8 @@ dependencies {
     implementation(libs.androidx.graphics.shapes.android)
     implementation(libs.androidx.navigation.compose)
     implementation(project(":ksemodule"))
+    implementation(project(":MyEnergiKlient"))
+    implementation(project(":EcoForestKlient"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
     implementation("com.charleskorn.kaml:kaml:0.59.0")
 

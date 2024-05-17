@@ -2,6 +2,12 @@
 include(":ksemodule")
 project(":ksemodule").projectDir = File(settingsDir, "../KSolarEdge/ksemodule")
 
+include(":MyEnergiKlient")
+project(":MyEnergiKlient").projectDir = File(settingsDir, "../MyEnergiKlient/MyEnergiKlient")
+
+include(":EcoForestKlient")
+project(":EcoForestKlient").projectDir = File(settingsDir, "../EcoForestKlient/EcoForestKlient")
+
 pluginManagement {
     repositories {
         google {
