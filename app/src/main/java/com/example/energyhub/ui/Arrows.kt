@@ -53,10 +53,6 @@ private class KVector(
     val endY: Dp
         get() = startY + (sin(angle * PI_BY_180) * length)
 
-    val width: Dp
-        get() = abs(startX.value - endX.value).dp
-    val height: Dp
-        get() = abs(startY.value - endY.value).dp
 }
 
 @Composable
