@@ -162,11 +162,11 @@ internal fun calculateArrowSize(power: Float): Dp {
 @Composable
 fun PowerLabel(
     power: Float,
+    modifier: Modifier = Modifier,
     unit: String = "kW",
     conversionFactor: Float = 1/1000f,
     decimalPlaces: Int = 2,
     vertical: Boolean = false,
-    modifier: Modifier = Modifier,
 ){
     val labelSep = (if (vertical) '\n' else ' ')
     val unitLabel = labelSep + unit
