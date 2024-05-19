@@ -35,6 +35,7 @@ import com.example.energyhub.model.BatteryChargeState
 import com.example.energyhub.model.EcoState
 import com.example.energyhub.model.SystemModel
 import com.example.energyhub.ui.LabelledArrow
+import com.example.energyhub.ui.PercentLabel
 import com.example.energyhub.ui.PowerArrow
 import com.example.energyhub.ui.PowerLabel
 import com.example.energyhub.ui.theme.EnergyHubTheme
@@ -58,7 +59,7 @@ fun CurrentStatusLayout (
 ) {
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
         val center = createGuidelineFromStart(0.5f)
-        val (solarLabel, solar, solarArrow, battery, batteryArrow) = createRefs()
+        val (solarLabel, solar, solarArrow, battery, batteryLabel, batteryArrow) = createRefs()
         val (grid, gridArrow, home, homeArrow) = createRefs()
         val ecoColor = colorResource(id = R.color.eco)
         val nonEcoColor = colorResource(id = R.color.non_eco)
@@ -105,6 +106,13 @@ fun CurrentStatusLayout (
                 bottom.linkTo(batteryArrow.bottom)
             }
         )
+        PercentLabel(
+            value = statusUiState.batteryLevel.toFloat(),
+            modifier = Modifier.constrainAs(batteryLabel){
+                start.linkTo(battery.start)
+                end.linkTo(battery.end)
+                bottom.linkTo(battery.top, margin = 16.dp)
+            })
         LabelledArrow(
             angle = 0f,
             length = 130.dp,
@@ -112,6 +120,7 @@ fun CurrentStatusLayout (
             activeColor = if (statusUiState.solarProduction>0)
                 ecoColor
             else nonEcoColor,
+            reverseArrow = statusUiState.isBatteryCharging,
             modifier = Modifier.constrainAs(batteryArrow){
                 bottom.linkTo(solarArrow.bottom)
                 end.linkTo(solarArrow.start)

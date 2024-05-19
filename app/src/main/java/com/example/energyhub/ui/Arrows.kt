@@ -176,12 +176,17 @@ fun PowerLabel(
 }
 
 @Composable
-fun PercentLabel(value: Float){
+fun PercentLabel(
+    value: Float,
+    modifier: Modifier = Modifier,
+    ){
     PowerLabel(
         power = value,
         unit = "%",
         conversionFactor = 1f,
-        decimalPlaces = 0)
+        decimalPlaces = 0,
+        modifier = modifier
+    )
 }
 
 @Composable
