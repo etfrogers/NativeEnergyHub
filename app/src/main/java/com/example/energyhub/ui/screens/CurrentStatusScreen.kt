@@ -57,7 +57,10 @@ fun CurrentStatusScreen(
 fun CurrentStatusLayout (
     statusUiState: StatusUiState
 ) {
-    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+    ConstraintLayout(modifier = Modifier
+        .fillMaxSize()
+        .background(Color.White)
+    ) {
         val center = createGuidelineFromStart(0.5f)
         val (solarLabel, solar, solarArrow, battery, batteryLabel, batteryArrow) = createRefs()
         val (grid, gridArrow, home, homeArrow) = createRefs()
@@ -218,7 +221,7 @@ fun Battery(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = false)
 @Composable
 fun PreviewCurrentStatus() {
     EnergyHubTheme {
