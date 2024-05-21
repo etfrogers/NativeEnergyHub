@@ -48,11 +48,10 @@ class SolarStatus (
 
 class SolarEdgeModel (siteID: String, apiKey: String) : BaseModel() {
     private val service: SolarEdgeApiService = SolarEdgeApi(siteID, apiKey).retrofitService
-    private lateinit var powerFlowData: FlowData
 
 //    @popup_on_error('SolarEdge', cleanup_function=BaseModel._finish_refresh)
     suspend fun refresh(): SolarStatus {
-        powerFlowData = getCurrentPowerFlow().siteCurrentPowerFlow
+        val powerFlowData = getCurrentPowerFlow().siteCurrentPowerFlow
         val conversionFactor = 1000
         if (powerFlowData.unit != "kW") {
             throw NotImplementedError()

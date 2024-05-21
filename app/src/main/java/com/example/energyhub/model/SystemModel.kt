@@ -6,9 +6,12 @@ enum class EcoState {
 
 object SystemModel {
     lateinit var solarEdgeModel: SolarEdgeModel
+    lateinit var ecoForestModel: EcoForestModel
 
     fun build(config: Config) {
         solarEdgeModel = SolarEdgeModel(config.solarEdgeConfig.siteID, config.solarEdgeConfig.apiKey)
+        val ecoForest = config.ecoForestConfig
+        ecoForestModel = EcoForestModel(ecoForest.server, ecoForest.port, ecoForest.serialNumber, ecoForest.authKey)
     }
 
     suspend fun refresh(){

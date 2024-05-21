@@ -28,11 +28,13 @@ import androidx.compose.ui.unit.times
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.toPath
+import com.etfrogers.ecoforestklient.UnitValue
 import com.example.energyhub.R
 import com.example.energyhub.ui.theme.EnergyHubTheme
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.sin
 
 const val PI_BY_180 = PI / 180.0
@@ -78,47 +80,55 @@ fun Arrow(
     ) {
         val endX = vector.endX.value * density
         val endY = vector.endY.value * density
-        drawLine(
-            start = Offset(x = vector.startX.value, y = vector.startY.value),
-            end = Offset(x = endX, y = endY),
-            color = color,
-            strokeWidth = shaftWidth.value,
+        translate(
+            // startX == startY == 0
+            left = -min(endX, 0f),
+            top = -min(endY, 0f)
         )
+        {
 
-        if (headSize > 0.dp) {
-            val head = RoundedPolygon(
-                numVertices = 3,
-                radius = headSize.value / 2,
-                centerX = if (arrowAtMidpoint) 0f else -headSize.value /2,
-                centerY = 0f,
+            drawLine(
+                start = Offset(x = vector.startX.value, y = vector.startY.value),
+                end = Offset(x = endX, y = endY),
+                color = color,
+                strokeWidth = shaftWidth.value,
             )
-            val headPath = head.toPath().asComposePath()
 
-            // values if the arrow is reversed.
-            var translationX = 0f
-            var translationY = 0f
+            if (headSize > 0.dp) {
+                val head = RoundedPolygon(
+                    numVertices = 3,
+                    radius = headSize.value / 2,
+                    centerX = if (arrowAtMidpoint) 0f else -headSize.value / 2,
+                    centerY = 0f,
+                )
+                val headPath = head.toPath().asComposePath()
+
+                // values if the arrow is reversed.
+                var translationX = 0f
+                var translationY = 0f
 
 
-            if (arrowAtMidpoint) {
-                translationX = endX / 2
-                translationY = endY / 2
-            } else {
-                if (!reverseArrow) {
-                    translationX = endX
-                    translationY = endY
+                if (arrowAtMidpoint) {
+                    translationX = endX / 2
+                    translationY = endY / 2
+                } else {
+                    if (!reverseArrow) {
+                        translationX = endX
+                        translationY = endY
+                    }
                 }
-            }
-            translate(
-                left = translationX,
-                top = translationY
-            ) {
-                var rotationAngle = angle
-                if (reverseArrow) {
-                    rotationAngle += 180
-                }
-                rotate(rotationAngle, Offset(0f, 0f)) {
-                    scale(1.0f, headRatio, Offset(0f, 0f)) {
-                        drawPath(headPath, color = color)
+                translate(
+                    left = translationX,
+                    top = translationY
+                ) {
+                    var rotationAngle = angle
+                    if (reverseArrow) {
+                        rotationAngle += 180
+                    }
+                    rotate(rotationAngle, Offset(0f, 0f)) {
+                        scale(1.0f, headRatio, Offset(0f, 0f)) {
+                            drawPath(headPath, color = color)
+                        }
                     }
                 }
             }
@@ -156,19 +166,59 @@ internal fun calculateArrowSize(power: Float): Dp {
 }
 
 @Composable
+fun UnitLabel(
+    value: UnitValue<Float>,
+    modifier: Modifier = Modifier,
+    conversionFactor: Float = 1f,
+    decimalPlaces: Int = 2,
+    isVertical: Boolean = false,
+    setPoint: UnitValue<Float>? = null,
+    offset: UnitValue<Float>? = null,
+){
+    if (offset != null) {
+        assert(offset.unit == value.unit)
+    }
+    if (setPoint != null) {
+        assert(setPoint.unit == value.unit)
+    }
+
+    PowerLabel(
+        power = value.value,
+        unit = value.unit,
+        modifier = modifier,
+        conversionFactor = conversionFactor,
+        decimalPlaces = decimalPlaces,
+        isVertical = isVertical,
+        offset = offset?.value,
+        setPoint = setPoint?.value
+        )
+}
+
+@Composable
 fun PowerLabel(
     power: Float,
     modifier: Modifier = Modifier,
     unit: String = "kW",
     conversionFactor: Float = 1/1000f,
     decimalPlaces: Int = 2,
-    vertical: Boolean = false,
+    isVertical: Boolean = false,
+    setPoint: Float? = null,
+    offset: Float? = null,
 ){
-    val labelSep = (if (vertical) '\n' else ' ')
+    val labelSep = (if (isVertical) '\n' else ' ')
     val unitLabel = labelSep + unit
     val valueString =  "%.${decimalPlaces}f".format(power*conversionFactor)
+    var setPointStr = ""
+    if (setPoint != null) {
+        setPointStr = "%.${decimalPlaces}f".format(setPoint*conversionFactor)
+        if (offset != null){
+            setPointStr = "${setPoint - offset} - $setPointStr"
+        }
+        setPointStr = " ($setPointStr)"
+    }
+    val string = "$valueString$setPointStr$unitLabel"
     Text (
-        text = "$valueString$unitLabel",
+        text = string,
         style = typography.labelLarge,
         textAlign = TextAlign.Center,
         modifier = modifier,
@@ -216,7 +266,7 @@ fun LabelledArrow(
             )
             PowerLabel(
                 power = power,
-                vertical = isVertical,
+                isVertical = isVertical,
             )
         }
     } else {
@@ -226,7 +276,7 @@ fun LabelledArrow(
         ) {
             PowerLabel(
                 power = power,
-                vertical = isVertical,
+                isVertical = isVertical,
             )
             PowerArrow(
                 angle = angle,
@@ -247,6 +297,7 @@ fun ArrowPreview() {
         ConstraintLayout (modifier = Modifier.fillMaxSize()){
             // Create references for the composables to constrain
             val (arrow, arrow2, arrow3, arrow4, arrow5, arrow6, arrow7, arrow8) = createRefs()
+            val (arrow10, arrow11, arrow12) = createRefs()
             val center = createGuidelineFromStart(0.5f)
             val middle = createGuidelineFromTop(0.5f)
             Arrow(
@@ -254,8 +305,8 @@ fun ArrowPreview() {
                 length = 100.dp,
                 color = Color.Green,
                 modifier = Modifier.constrainAs(arrow){
-                    top.linkTo(middle)
-                    start.linkTo(center)
+                    bottom.linkTo(middle)
+                    end.linkTo(center)
                 }
             )
             Arrow(
@@ -263,9 +314,9 @@ fun ArrowPreview() {
                 length = 100.dp,
                 color = Color.Red,
                 reverseArrow = true,
-                modifier = Modifier.constrainAs(arrow){
+                modifier = Modifier.constrainAs(arrow10){
                     top.linkTo(middle)
-                    start.linkTo(center)
+                    end.linkTo(center)
                 }
             )
             Arrow(
@@ -274,7 +325,7 @@ fun ArrowPreview() {
                 color = Color.Gray,
                 reverseArrow = true,
                 arrowAtMidpoint = true,
-                modifier = Modifier.constrainAs(arrow){
+                modifier = Modifier.constrainAs(arrow11){
                     top.linkTo(middle)
                     start.linkTo(center)
                 }
@@ -285,7 +336,7 @@ fun ArrowPreview() {
                 color = Color.Blue,
                 reverseArrow = false,
                 arrowAtMidpoint = true,
-                modifier = Modifier.constrainAs(arrow){
+                modifier = Modifier.constrainAs(arrow12){
                     top.linkTo(middle)
                     start.linkTo(center)
                 }

@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout.compose)
     implementation(libs.androidx.graphics.shapes.android)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.kotlinx.datetime)
     implementation(project(":ksemodule"))
     implementation(project(":MyEnergiKlient"))
     implementation(project(":EcoForestKlient"))
