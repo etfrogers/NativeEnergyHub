@@ -22,6 +22,10 @@ class StatusViewModel(
     private val _uiState = MutableStateFlow(StatusUiState())
     val uiState: StateFlow<StatusUiState> = _uiState.asStateFlow()
 
+    init {
+        refresh()
+    }
+
     fun refresh(){
         viewModelScope.launch(context = Dispatchers.IO) {
             val solarStatus = async { solarModel.refresh() }
@@ -33,6 +37,8 @@ class StatusViewModel(
                 )
             }
         }
+//        refreshSolar()
+//        refreshHeatPump()
     }
 
     private fun refreshSolar(): Job {

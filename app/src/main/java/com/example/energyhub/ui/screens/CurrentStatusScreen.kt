@@ -59,11 +59,6 @@ fun CurrentStatusScreen(
         )
 ){
     val statusUiState = statusViewModel.uiState.collectAsState()
-    var firstRun by remember { mutableStateOf(true) }
-    if (firstRun) {
-        statusViewModel.refresh()
-        firstRun = false
-    }
     CurrentStatusLayout(statusUiState.value)
 }
 
