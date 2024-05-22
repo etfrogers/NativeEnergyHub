@@ -1,4 +1,8 @@
 package com.example.energyhub.ui.screens
+import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.etfrogers.ecoforestklient.EcoforestStatus
@@ -15,26 +19,39 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+internal const val TAG = "StatusViewModel"
+
 class StatusViewModel(
     private val solarModel: SolarEdgeModel,
     private val heatPumpModel: EcoForestModel,
 ): ViewModel() {
     private val _uiState = MutableStateFlow(StatusUiState())
     val uiState: StateFlow<StatusUiState> = _uiState.asStateFlow()
+    var isRefreshing by mutableStateOf( false)
+        private set
 
     init {
+        Log.d(TAG, "Initialising...")
         refresh()
     }
 
     fun refresh(){
+        Log.d(TAG, "Starting refresh")
+        isRefreshing = true
         viewModelScope.launch(context = Dispatchers.IO) {
-            val solarStatus = async { solarModel.refresh() }
-            val heatPumpStatus = async { heatPumpModel.refresh() }
-            _uiState.update { currentState ->
-                currentState.copy(
-                    solar = solarStatus.await(),
-                    heatPump = heatPumpStatus.await(),
-                )
+            try {
+                val solarStatus = async { solarModel.refresh() }
+                val heatPumpStatus = async { heatPumpModel.refresh() }
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        solar = solarStatus.await(),
+                        heatPump = heatPumpStatus.await(),
+                    )
+                }
+
+            } finally {
+                Log.d(TAG, "Finishing refresh")
+                isRefreshing = false
             }
         }
 //        refreshSolar()

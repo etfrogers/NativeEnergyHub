@@ -2,24 +2,24 @@ package com.example.energyhub.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -43,30 +43,55 @@ import com.example.energyhub.R
 import com.example.energyhub.model.BatteryChargeState
 import com.example.energyhub.model.EcoState
 import com.example.energyhub.model.SolarStatus
-import com.example.energyhub.model.SystemModel
 import com.example.energyhub.ui.LabelledArrow
 import com.example.energyhub.ui.PercentLabel
 import com.example.energyhub.ui.PowerArrow
 import com.example.energyhub.ui.PowerLabel
+import com.example.energyhub.ui.PullToRefreshBox
 import com.example.energyhub.ui.UnitLabel
 import com.example.energyhub.ui.theme.EnergyHubTheme
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CurrentStatusScreen(
-    statusViewModel: StatusViewModel = StatusViewModel(
-        solarModel = SystemModel.solarEdgeModel,
-        heatPumpModel = SystemModel.ecoForestModel,
-        )
+    statusViewModel: StatusViewModel,
+    modifier: Modifier = Modifier
 ){
-    val statusUiState = statusViewModel.uiState.collectAsState()
-    CurrentStatusLayout(statusUiState.value)
+    val statusUiState by statusViewModel.uiState.collectAsState()
+
+    PullToRefreshBox(
+        modifier = modifier,
+        isRefreshing = statusViewModel.isRefreshing,
+        onRefresh = { statusViewModel.refresh() }
+    ){
+        CurrentStatusLayout(
+            statusUiState,
+            modifier = Modifier.verticalScroll(
+                state = rememberScrollState(),
+                enabled = true
+            )
+        )
+        IconButton(
+            onClick = { statusViewModel.refresh() },
+            enabled = !statusViewModel.isRefreshing,
+            modifier = Modifier.align(Alignment.BottomEnd)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.icons8_reset_48),
+                contentDescription = "Refresh",
+//                Modifier.background(color = if(statusViewModel.isRefreshing) Color.Red else Color.Blue)
+            )
+        }
+    }
 }
 
 @Composable
 fun CurrentStatusLayout (
-    statusUiState: StatusUiState
+    statusUiState: StatusUiState,
+    modifier: Modifier = Modifier,
 ) {
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(modifier = modifier.fillMaxSize()) {
 
         ConstraintLayout(
             modifier = Modifier
