@@ -19,21 +19,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.charleskorn.kaml.Yaml
 import com.example.energyhub.model.Config
 import com.example.energyhub.model.SystemModel
+import com.example.energyhub.model.loadConfig
 import com.example.energyhub.ui.nav.Navigation
 import com.example.energyhub.ui.theme.EnergyHubTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        val context = this
-        val text = context
+
+        loadConfig( this
             .resources
             .openRawResource(R.raw.config)
-            .bufferedReader().use { it.readText() }
-        val config = Yaml.default.decodeFromString(Config.serializer(), text)
-        SystemModel.build(config)
+        )
+        SystemModel.build(Config)
 
         super.onCreate(savedInstanceState)
         setContent {
@@ -43,7 +42,6 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    //Greeting("Android")
                     MainView()
                 }
             }
