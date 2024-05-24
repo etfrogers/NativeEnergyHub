@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.example.energyhub.model.Config
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -258,7 +259,7 @@ val unspecified_scheme = ColorFamily(
 
 @Composable
 fun EnergyHubTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = Config.isAppInDarkTheme(isSystemInDarkTheme()),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable() () -> Unit

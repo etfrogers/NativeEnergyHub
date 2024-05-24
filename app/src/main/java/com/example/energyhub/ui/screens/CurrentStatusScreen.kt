@@ -41,6 +41,7 @@ import com.etfrogers.ecoforestklient.EcoforestStatus
 import com.etfrogers.ecoforestklient.UnitValue
 import com.example.energyhub.R
 import com.example.energyhub.model.BatteryChargeState
+import com.example.energyhub.model.Config
 import com.example.energyhub.model.EcoState
 import com.example.energyhub.model.SolarStatus
 import com.example.energyhub.ui.LabelledArrow
@@ -112,7 +113,7 @@ fun CurrentStatusLayout (
                 EcoState.GRID -> nonEcoColor
                 EcoState.MIXED -> colorResource(id = R.color.mixed)
             }
-            val colorMatrix = if (isSystemInDarkTheme()) {
+            val colorMatrix = if (Config.isAppInDarkTheme(isSystemInDarkTheme())) {
              floatArrayOf(
                 -1f, 0f, 0f, 0f, 255f,
                 0f, -1f, 0f, 0f, 255f,

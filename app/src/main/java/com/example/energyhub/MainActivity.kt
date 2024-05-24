@@ -37,13 +37,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             EnergyHubTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    MainView()
-                }
+                MainView()
+//                testRefresh()
             }
         }
     }
@@ -60,14 +55,12 @@ fun MainPreview() {
 @Composable
 fun MainView(){
     val navController = rememberNavController()
-    EnergyHubTheme {
         // A surface container using the 'background' color from the theme
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
             MainScreen(navController = navController)
-        }
     }
 }
 

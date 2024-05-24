@@ -8,10 +8,24 @@ import kotlinx.serialization.Serializable
 import java.io.InputStream
 
 @Serializable
+data class Preferences(
+    @SerialName("color-mode") val colorMode: ColorMode,
+)
+
+@Serializable
 data class ConfigData (
     @SerialName("solar-edge") val solarEdgeConfig: SolarEdgeConfig,
     @SerialName("ecoforest") val ecoForestConfig: EcoForestConfig,
-)
+    @SerialName("app-preferences") val preferences: Preferences,
+){
+    fun isAppInDarkTheme(isSystemInDarkTheme: Boolean): Boolean {
+        return when (preferences.colorMode) {
+            ColorMode.DARK -> true
+            ColorMode.LIGHT -> false
+            ColorMode.AUTO -> isSystemInDarkTheme
+        }
+    }
+}
 
 lateinit var Config: ConfigData
 
@@ -20,3 +34,9 @@ fun loadConfig(configFile: InputStream) {
     Config = Yaml.default.decodeFromString(ConfigData.serializer(), text)
 }
 
+@Serializable
+enum class ColorMode {
+    @SerialName("light") LIGHT,
+    @SerialName("dark") DARK,
+    @SerialName("auto") AUTO,
+}
