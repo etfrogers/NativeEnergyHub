@@ -8,10 +8,10 @@ import com.etfrogers.myenergiklient.Zappi
 class MyEnergiModel(username: String,
                     password: String,
                     invalidSerials: List<String> = listOf()
-): BaseModel() {
+): BaseModel<MyEnergiSystem>() {
 
     private val client: MyEnergiClient = MyEnergiClient (username, password, invalidSerials)
-    override suspend fun refresh(): MyEnergiSystem {
+    override suspend fun refreshUnsafe(): MyEnergiSystem {
         return client.getCurrentStatus()
     }
 }
@@ -29,3 +29,7 @@ val MyEnergiSystem.zappi: Zappi
 val MyEnergiSystem.eddi: Eddi
     get() = if (eddis.size == 1) eddis[0]
     else Eddi()
+
+internal fun emptyZappi() = Zappi(pStatusCode = "A")
+
+fun emptySystem() = MyEnergiSystem(zappis = listOf(emptyZappi()))

@@ -1,12 +1,50 @@
 package com.example.energyhub.model
 
-abstract class BaseModel(
+import android.util.Log
+
+abstract class BaseModel<StatusType>(
     var stale: Boolean = true,
     var refreshing: Boolean = true,
 ) {
-    abstract suspend fun refresh(): Any
+    suspend fun refresh(): Resource<StatusType> {
+        return try {
+            Resource.Success(refreshUnsafe())
+        } catch (e: Exception){
+            Log.d("Status Refresh Error", "${e::class.simpleName}: ${e.message}", e)
+            Resource.Error(e.toErrorType())
+        }
+    }
+
+    protected abstract suspend fun refreshUnsafe(): StatusType
+
 }
 
+fun Exception.toErrorType() = ErrorType.Unknown(this)
+// when (this.code) {
+//    ErrorCodes.Http.ResourceNotFound   -> ErrorType.Api.NotFound
+//    ErrorCodes.Http.InternalServer     -> ErrorType.Api.Server
+//    ErrorCodes.Http.ServiceUnavailable -> ErrorType.Api.ServiceUnavailable
+//    else                               -> ErrorType.Unknown
+//}
+sealed class Resource<T> {
+    data class Success<T>(val data: T): Resource<T>()
+    data class Error<T>(val error: ErrorType): Resource<T>()
+}
+
+sealed class ErrorType(exception: Exception) {
+    val type: String? = exception::class.simpleName
+    val msg: String? = exception.message
+
+    sealed class Api(exception: Exception): ErrorType(exception) {
+//        data object Network: Api()
+//        data object ServiceUnavailable : Api()
+//        data object NotFound : Api()
+//        data object Server : Api()
+
+    }
+    class Unknown(exception: Exception): ErrorType(exception)
+    // other categories of Error
+}
 /*
 import datetime
 from abc import ABC, abstractmethod

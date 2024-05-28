@@ -1,5 +1,6 @@
 package com.example.energyhub.ui.screens
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,9 +11,11 @@ import com.etfrogers.ecoforestklient.UnitValue
 import com.etfrogers.myenergiklient.MyEnergiSystem
 import com.example.energyhub.model.EcoForestModel
 import com.example.energyhub.model.MyEnergiModel
+import com.example.energyhub.model.Resource
 import com.example.energyhub.model.SolarEdgeModel
 import com.example.energyhub.model.SolarStatus
 import com.example.energyhub.model.carPower
+import com.example.energyhub.model.emptySystem
 import com.example.energyhub.model.immersionPower
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -50,12 +53,11 @@ class StatusViewModel(
                 val diverterStatus = async { diverterModel.refresh() }
                 _uiState.update { currentState ->
                     currentState.copy(
-                        solar = solarStatus.await(),
-                        heatPump = heatPumpStatus.await(),
-                        diverter = diverterStatus.await(),
+                        solarResource = solarStatus.await(),
+                        heatPumpResource = heatPumpStatus.await(),
+                        diverterResource = diverterStatus.await(),
                     )
                 }
-
             } finally {
                 Log.d(TAG, "Finishing refresh")
                 isRefreshing = false
@@ -70,7 +72,7 @@ class StatusViewModel(
             val status = solarModel.refresh()
             _uiState.update { currentState ->
                 currentState.copy(
-                    solar = status
+                    solarResource = status
                 )
             }
         }
@@ -82,7 +84,7 @@ class StatusViewModel(
 //            _uiState.value.heatPump = status
             _uiState.update { currentState ->
                 currentState.copy(
-                    heatPump = status
+                    heatPumpResource = status
                 )
             }
         }
@@ -109,14 +111,33 @@ val EcoforestStatus.heatingPower: UnitValue<Float>
 
 
 data class StatusUiState(
-    val solar: SolarStatus = SolarStatus(),
-    val heatPump: EcoforestStatus = EcoforestStatus(),
-    val diverter: MyEnergiSystem = MyEnergiSystem()
+    val solarResource: Resource<SolarStatus> = Resource.Success(SolarStatus()),
+    val heatPumpResource: Resource<EcoforestStatus> = Resource.Success(EcoforestStatus()),
+    val diverterResource: Resource<MyEnergiSystem> = Resource.Success(MyEnergiSystem()),
 ) {
+    val solar = dataOrEmpty(solarResource, ::SolarStatus)
+    val heatPump = dataOrEmpty(heatPumpResource, ::EcoforestStatus)
+    val diverter = dataOrEmpty(diverterResource, ::emptySystem)
+
+    val errors = listOf(
+        solarResource,
+        heatPumpResource,
+        diverterResource).mapNotNull {
+            if (it is Resource.Error) it.error else null
+        }
+
     val remainingPower: Float
         get() = solar.load - heatPump.dhwPower.value - bottomArmsPower
 
     val bottomArmsPower: Float
         get() = diverter.immersionPower + diverter.carPower + heatPump.heatingPower.value
+
+    private fun <T> dataOrEmpty(resource: Resource<T>, emptyMaker:()->T): T {
+        return if (resource is Resource.Success){
+            resource.data
+        } else {
+            emptyMaker()
+        }
+    }
 }
 

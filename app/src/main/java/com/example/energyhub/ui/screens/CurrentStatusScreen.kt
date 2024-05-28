@@ -1,5 +1,7 @@
 package com.example.energyhub.ui.screens
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -30,6 +32,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -39,14 +42,15 @@ import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.etfrogers.ecoforestklient.EcoforestStatus
 import com.etfrogers.ecoforestklient.UnitValue
-import com.etfrogers.myenergiklient.MyEnergiSystem
-import com.etfrogers.myenergiklient.Zappi
 import com.example.energyhub.R
 import com.example.energyhub.model.BatteryChargeState
 import com.example.energyhub.model.Config
 import com.example.energyhub.model.EcoState
+import com.example.energyhub.model.ErrorType
+import com.example.energyhub.model.Resource
 import com.example.energyhub.model.SolarStatus
 import com.example.energyhub.model.carPower
+import com.example.energyhub.model.emptySystem
 import com.example.energyhub.model.immersionPower
 import com.example.energyhub.model.zappi
 import com.example.energyhub.ui.LabelledArrow
@@ -57,6 +61,10 @@ import com.example.energyhub.ui.PullToRefreshBox
 import com.example.energyhub.ui.UnitLabel
 import com.example.energyhub.ui.theme.EnergyHubTheme
 
+private fun showToast(context: Context, error: ErrorType){
+    val msg = "${error.type}\n${error.msg}"
+    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +79,8 @@ fun CurrentStatusScreen(
         isRefreshing = statusViewModel.isRefreshing,
         onRefresh = { statusViewModel.refresh() }
     ){
+        statusUiState.errors.forEach { showToast(LocalContext.current, it) }
+
         CurrentStatusLayout(
             statusUiState,
             modifier = Modifier.verticalScroll(
@@ -98,6 +108,9 @@ fun CurrentStatusLayout (
     modifier: Modifier = Modifier,
     darkTheme:Boolean = Config.isAppInDarkTheme(isSystemInDarkTheme())
 ) {
+    val solar = statusUiState.solar
+    val heatPump = statusUiState.heatPump
+    val diverter = statusUiState.diverter
     Surface(modifier = modifier.fillMaxSize()) {
 
         ConstraintLayout(
@@ -106,7 +119,7 @@ fun CurrentStatusLayout (
         ) {
             val armLength = 90.dp
             val center = createGuidelineFromStart(0.5f)
-            val (solarLabel, solar, solarArrow, battery, batteryLabel, batteryArrow) = createRefs()
+            val (solarLabel, solarImg, solarArrow, battery, batteryLabel, batteryArrow) = createRefs()
             val (grid, gridArrow, home, homeArrow) = createRefs()
             val (loadArrow, load) = createRefs()
             val (bottomArmsArrow, fromHomeArrow) = createRefs()
@@ -114,7 +127,7 @@ fun CurrentStatusLayout (
             val (immersion, immersionArrow, car, carArrow) = createRefs()
             val ecoColor = colorResource(id = R.color.eco)
             val nonEcoColor = colorResource(id = R.color.non_eco)
-            val loadColor = when (statusUiState.solar.loadStatus) {
+            val loadColor = when (solar.loadStatus) {
                 EcoState.ECO -> ecoColor
                 EcoState.GRID -> nonEcoColor
                 EcoState.MIXED -> colorResource(id = R.color.mixed)
@@ -132,7 +145,7 @@ fun CurrentStatusLayout (
                     0f, 0f, 0f, 1f, 0f
                 )}
             PowerLabel(
-                power = statusUiState.solar.solarProduction,
+                power = solar.solarProduction,
                 modifier = Modifier.constrainAs(solarLabel) {
                     top.linkTo(parent.top, margin = 12.dp)
                     start.linkTo(parent.start)
@@ -148,7 +161,7 @@ fun CurrentStatusLayout (
                 modifier = Modifier
                     .height(60.dp)
                     .width(150.dp)
-                    .constrainAs(solar) {
+                    .constrainAs(solarImg) {
                         start.linkTo(parent.start)
                         end.linkTo(parent.end)
                         top.linkTo(solarLabel.bottom, margin = 8.dp)
@@ -158,15 +171,15 @@ fun CurrentStatusLayout (
                 angle = 90f,
                 length = 75.dp,
                 activeColor = colorResource(id = R.color.eco),
-                power = statusUiState.solar.solarProduction,
+                power = solar.solarProduction,
                 modifier = Modifier.constrainAs(solarArrow) {
                     start.linkTo(center)
-                    top.linkTo(solar.bottom)
+                    top.linkTo(solarImg.bottom)
                 }
             )
             Battery(
-                chargeLevel = statusUiState.solar.batteryChargeState,
-                charge = statusUiState.solar.batteryLevel,
+                chargeLevel = solar.batteryChargeState,
+                charge = solar.batteryLevel,
                 widthDp = 40.dp,
                 heightDp = 100.dp,
                 modifier = Modifier.constrainAs(battery) {
@@ -177,7 +190,7 @@ fun CurrentStatusLayout (
                 }
             )
             PercentLabel(
-                value = statusUiState.solar.batteryLevel.toFloat(),
+                value = solar.batteryLevel.toFloat(),
                 modifier = Modifier.constrainAs(batteryLabel) {
                     start.linkTo(battery.start)
                     end.linkTo(battery.end)
@@ -186,11 +199,11 @@ fun CurrentStatusLayout (
             LabelledArrow(
                 angle = 0f,
                 length = armLength,
-                power = statusUiState.solar.batteryProduction,
-                activeColor = if (statusUiState.solar.solarProduction > 0)
+                power = solar.batteryProduction,
+                activeColor = if (solar.solarProduction > 0)
                     ecoColor
                 else nonEcoColor,
-                reverseArrow = statusUiState.solar.isBatteryCharging,
+                reverseArrow = solar.isBatteryCharging,
                 modifier = Modifier.constrainAs(batteryArrow) {
                     bottom.linkTo(solarArrow.bottom)
                     end.linkTo(solarArrow.start)
@@ -199,9 +212,9 @@ fun CurrentStatusLayout (
             LabelledArrow(
                 angle = 0f,
                 length = armLength,
-                power = statusUiState.solar.gridPower,
-                activeColor = if (statusUiState.solar.isGridExporting) ecoColor else nonEcoColor,
-                reverseArrow = !statusUiState.solar.isGridExporting,
+                power = solar.gridPower,
+                activeColor = if (solar.isGridExporting) ecoColor else nonEcoColor,
+                reverseArrow = !solar.isGridExporting,
                 modifier = Modifier.constrainAs(gridArrow) {
                     bottom.linkTo(solarArrow.bottom)
                     start.linkTo(solarArrow.start)
@@ -223,7 +236,7 @@ fun CurrentStatusLayout (
             LabelledArrow(
                 angle = 90f,
                 length = 70.dp,
-                power = statusUiState.solar.load,
+                power = solar.load,
                 activeColor = loadColor,
                 modifier = Modifier.constrainAs(homeArrow) {
                     start.linkTo(solarArrow.start)
@@ -245,7 +258,7 @@ fun CurrentStatusLayout (
             PowerArrow(
                 angle = 90f,
                 length = 70.dp,
-                power = statusUiState.solar.load,
+                power = solar.load,
                 activeColor = loadColor,
                 modifier = Modifier.constrainAs(fromHomeArrow){
                     start.linkTo(homeArrow.start)
@@ -276,7 +289,7 @@ fun CurrentStatusLayout (
             LabelledArrow(
                 angle = 180f,
                 length = armLength,
-                power = statusUiState.heatPump.dhwPower.value,
+                power = heatPump.dhwPower.value,
                 activeColor = loadColor,
                 modifier = Modifier.constrainAs(dhwArrow){
                     bottom.linkTo(fromHomeArrow.bottom)
@@ -297,9 +310,9 @@ fun CurrentStatusLayout (
                     }
             )
             UnitLabel(
-                value = statusUiState.heatPump.dhwActualTemp,
-                setPoint = statusUiState.heatPump.dhwSetpoint,
-                offset = statusUiState.heatPump.dhwOffset,
+                value = heatPump.dhwActualTemp,
+                setPoint = heatPump.dhwSetpoint,
+                offset = heatPump.dhwOffset,
                 decimalPlaces = 1,
                 modifier = Modifier.constrainAs(dhwLabel){
                     start.linkTo(dhw.start)
@@ -320,7 +333,7 @@ fun CurrentStatusLayout (
             LabelledArrow(
                 angle = 180f,
                 length = armLength,
-                power = statusUiState.heatPump.heatingPower.value,
+                power = heatPump.heatingPower.value,
                 activeColor = loadColor,
                 modifier = Modifier.constrainAs(heatingArrow){
                     bottom.linkTo(bottomArmsArrow.bottom)
@@ -330,7 +343,7 @@ fun CurrentStatusLayout (
             Image(
                 painter = painterResource(id = R.drawable.radiator),
                 contentDescription = "Heating",
-                alpha = if(statusUiState.heatPump.isHeatingOn) 1f else .5f,
+                alpha = if(heatPump.isHeatingOn) 1f else .5f,
                 colorFilter = colorFilter,
                 modifier = Modifier
                     .width(70.dp)
@@ -342,9 +355,9 @@ fun CurrentStatusLayout (
                     }
             )
             UnitLabel(
-                value = statusUiState.heatPump.heatingBufferActualTemp,
-                setPoint = statusUiState.heatPump.heatingBufferSetpoint,
-                offset = statusUiState.heatPump.heatingBufferOffset,
+                value = heatPump.heatingBufferActualTemp,
+                setPoint = heatPump.heatingBufferSetpoint,
+                offset = heatPump.heatingBufferOffset,
                 decimalPlaces = 1,
                 modifier = Modifier.constrainAs(heatingLabel){
                     start.linkTo(heating.start)
@@ -355,7 +368,7 @@ fun CurrentStatusLayout (
             LabelledArrow(
                 angle = 0f,
                 length = 80.dp,
-                power = statusUiState.diverter.immersionPower,
+                power = diverter.immersionPower,
                 activeColor = loadColor,
                 modifier = Modifier.constrainAs(immersionArrow){
                     bottom.linkTo(bottomArmsArrow.bottom)
@@ -376,7 +389,7 @@ fun CurrentStatusLayout (
             LabelledArrow(
                 angle = 90f,
                 length = 70.dp,
-                power = statusUiState.diverter.carPower,
+                power = diverter.carPower,
                 activeColor = loadColor,
                 modifier = Modifier.constrainAs(carArrow){
                     top.linkTo(bottomArmsArrow.bottom)
@@ -387,7 +400,7 @@ fun CurrentStatusLayout (
                 painter = painterResource(id = R.drawable.ipace),
                 contentDescription = "Car",
                 colorFilter = colorFilter,
-                alpha = if(statusUiState.diverter.zappi.isCarConnected) 1f else 0.5f,
+                alpha = if(diverter.zappi.isCarConnected) 1f else 0.5f,
                 modifier = Modifier
                     .width(90.dp)
                     .constrainAs(car){
@@ -453,12 +466,10 @@ fun Battery(
 fun PreviewCurrentStatus() {
     val darkTheme = false
 
-    val zappi = Zappi(pStatusCode = "A")
-
     EnergyHubTheme(darkTheme = darkTheme) {
         CurrentStatusLayout(
             StatusUiState(
-                SolarStatus(
+                Resource.Success(SolarStatus(
                     solarProduction = 3000f,
                     batteryLevel = 30,
 //                    batteryChargeState = BatteryChargeState.LOW,
@@ -467,13 +478,13 @@ fun PreviewCurrentStatus() {
                     gridPower = 500f,
                     load = 1500f,
 //                    loadStatus = EcoState.ECO,
-                ),
-                EcoforestStatus(
+                )),
+                Resource.Success(EcoforestStatus(
                     dhwActualTemp = UnitValue(53.4f, "ºC"),
                     dhwOffset = UnitValue(4f, "ºC"),
                     dhwSetpoint = UnitValue(46f, "ºC")
-                ),
-                MyEnergiSystem(zappis = listOf(zappi))
+                )),
+                Resource.Success(emptySystem())
             ),
             darkTheme = false,
         )

@@ -46,11 +46,11 @@ class SolarStatus (
     }
 }
 
-class SolarEdgeModel (siteID: String, apiKey: String) : BaseModel() {
+class SolarEdgeModel (siteID: String, apiKey: String) : BaseModel<SolarStatus>() {
     private val service: SolarEdgeApiService = SolarEdgeApi(siteID, apiKey).retrofitService
 
 //    @popup_on_error('SolarEdge', cleanup_function=BaseModel._finish_refresh)
-    override suspend fun refresh(): SolarStatus {
+    override suspend fun refreshUnsafe(): SolarStatus {
         val powerFlowData = getCurrentPowerFlow().siteCurrentPowerFlow
         val conversionFactor = 1000
         if (powerFlowData.unit != "kW") {
