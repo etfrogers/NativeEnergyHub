@@ -21,6 +21,7 @@ fun Navigation(
                 StatusViewModel(
                     solarModel = SystemModel.solarEdgeModel,
                     heatPumpModel = SystemModel.ecoForestModel,
+                    diverterModel = SystemModel.myEnergiModel,
                 )
             )
         }

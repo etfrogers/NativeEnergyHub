@@ -71,6 +71,8 @@ dependencies {
     implementation(project(":EcoForestKlient"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
     implementation("com.charleskorn.kaml:kaml:0.59.0")
+    implementation("io.github.rburgst:okhttp-digest:3.1.0")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -7,9 +7,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.etfrogers.ecoforestklient.EcoforestStatus
 import com.etfrogers.ecoforestklient.UnitValue
+import com.etfrogers.myenergiklient.MyEnergiSystem
 import com.example.energyhub.model.EcoForestModel
+import com.example.energyhub.model.MyEnergiModel
 import com.example.energyhub.model.SolarEdgeModel
 import com.example.energyhub.model.SolarStatus
+import com.example.energyhub.model.carPower
+import com.example.energyhub.model.immersionPower
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -24,6 +28,7 @@ internal const val TAG = "StatusViewModel"
 class StatusViewModel(
     private val solarModel: SolarEdgeModel,
     private val heatPumpModel: EcoForestModel,
+    private val diverterModel: MyEnergiModel,
 ): ViewModel() {
     private val _uiState = MutableStateFlow(StatusUiState())
     val uiState: StateFlow<StatusUiState> = _uiState.asStateFlow()
@@ -42,10 +47,12 @@ class StatusViewModel(
             try {
                 val solarStatus = async { solarModel.refresh() }
                 val heatPumpStatus = async { heatPumpModel.refresh() }
+                val diverterStatus = async { diverterModel.refresh() }
                 _uiState.update { currentState ->
                     currentState.copy(
                         solar = solarStatus.await(),
                         heatPump = heatPumpStatus.await(),
+                        diverter = diverterStatus.await(),
                     )
                 }
 
@@ -104,11 +111,12 @@ val EcoforestStatus.heatingPower: UnitValue<Float>
 data class StatusUiState(
     val solar: SolarStatus = SolarStatus(),
     val heatPump: EcoforestStatus = EcoforestStatus(),
+    val diverter: MyEnergiSystem = MyEnergiSystem()
 ) {
     val remainingPower: Float
-        get() = solar.load
+        get() = solar.load - heatPump.dhwPower.value - bottomArmsPower
 
     val bottomArmsPower: Float
-        get() = 0f
+        get() = diverter.immersionPower + diverter.carPower + heatPump.heatingPower.value
 }
 

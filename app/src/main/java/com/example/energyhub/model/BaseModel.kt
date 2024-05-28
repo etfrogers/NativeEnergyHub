@@ -4,6 +4,7 @@ abstract class BaseModel(
     var stale: Boolean = true,
     var refreshing: Boolean = true,
 ) {
+    abstract suspend fun refresh(): Any
 }
 
 /*

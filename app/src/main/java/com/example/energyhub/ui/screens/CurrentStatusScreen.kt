@@ -39,11 +39,16 @@ import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.etfrogers.ecoforestklient.EcoforestStatus
 import com.etfrogers.ecoforestklient.UnitValue
+import com.etfrogers.myenergiklient.MyEnergiSystem
+import com.etfrogers.myenergiklient.Zappi
 import com.example.energyhub.R
 import com.example.energyhub.model.BatteryChargeState
 import com.example.energyhub.model.Config
 import com.example.energyhub.model.EcoState
 import com.example.energyhub.model.SolarStatus
+import com.example.energyhub.model.carPower
+import com.example.energyhub.model.immersionPower
+import com.example.energyhub.model.zappi
 import com.example.energyhub.ui.LabelledArrow
 import com.example.energyhub.ui.PercentLabel
 import com.example.energyhub.ui.PowerArrow
@@ -91,6 +96,7 @@ fun CurrentStatusScreen(
 fun CurrentStatusLayout (
     statusUiState: StatusUiState,
     modifier: Modifier = Modifier,
+    darkTheme:Boolean = Config.isAppInDarkTheme(isSystemInDarkTheme())
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
 
@@ -113,7 +119,7 @@ fun CurrentStatusLayout (
                 EcoState.GRID -> nonEcoColor
                 EcoState.MIXED -> colorResource(id = R.color.mixed)
             }
-            val colorMatrix = if (Config.isAppInDarkTheme(isSystemInDarkTheme())) {
+            val colorMatrix = if (darkTheme) {
              floatArrayOf(
                 -1f, 0f, 0f, 0f, 255f,
                 0f, -1f, 0f, 0f, 255f,
@@ -346,6 +352,51 @@ fun CurrentStatusLayout (
                     top.linkTo(heating.bottom)
                 }
             )
+            LabelledArrow(
+                angle = 0f,
+                length = 80.dp,
+                power = statusUiState.diverter.immersionPower,
+                activeColor = loadColor,
+                modifier = Modifier.constrainAs(immersionArrow){
+                    bottom.linkTo(bottomArmsArrow.bottom)
+                    start.linkTo(bottomArmsArrow.end)
+                }
+            )
+            Image(
+                painter = painterResource(id = R.drawable.immersion_heater),
+                contentDescription = "Immersion",
+                colorFilter = colorFilter,
+                modifier = Modifier.constrainAs(immersion){
+                    top.linkTo(immersionArrow.bottom)
+                    bottom.linkTo(immersionArrow.bottom)
+                    start.linkTo(immersionArrow.end)
+                    end.linkTo(parent.end)
+                }
+            )
+            LabelledArrow(
+                angle = 90f,
+                length = 70.dp,
+                power = statusUiState.diverter.carPower,
+                activeColor = loadColor,
+                modifier = Modifier.constrainAs(carArrow){
+                    top.linkTo(bottomArmsArrow.bottom)
+                    start.linkTo(bottomArmsArrow.start)
+                }
+            )
+            Image(
+                painter = painterResource(id = R.drawable.ipace),
+                contentDescription = "Car",
+                colorFilter = colorFilter,
+                alpha = if(statusUiState.diverter.zappi.isCarConnected) 1f else 0.5f,
+                modifier = Modifier
+                    .width(90.dp)
+                    .constrainAs(car){
+                        top.linkTo(carArrow.bottom)
+                        bottom.linkTo(parent.bottom)
+                        end.linkTo(carArrow.start)
+                        start.linkTo(carArrow.start)
+                    }
+            )
         }
     }
 }
@@ -400,7 +451,11 @@ fun Battery(
 @Preview(showBackground = false)
 @Composable
 fun PreviewCurrentStatus() {
-    EnergyHubTheme(darkTheme = false) {
+    val darkTheme = false
+
+    val zappi = Zappi(pStatusCode = "A")
+
+    EnergyHubTheme(darkTheme = darkTheme) {
         CurrentStatusLayout(
             StatusUiState(
                 SolarStatus(
@@ -417,8 +472,10 @@ fun PreviewCurrentStatus() {
                     dhwActualTemp = UnitValue(53.4f, "ºC"),
                     dhwOffset = UnitValue(4f, "ºC"),
                     dhwSetpoint = UnitValue(46f, "ºC")
-                )
-            )
+                ),
+                MyEnergiSystem(zappis = listOf(zappi))
+            ),
+            darkTheme = false,
         )
     }
 }

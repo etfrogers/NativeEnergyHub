@@ -7,15 +7,20 @@ enum class EcoState {
 object SystemModel {
     lateinit var solarEdgeModel: SolarEdgeModel
     lateinit var ecoForestModel: EcoForestModel
+    lateinit var myEnergiModel: MyEnergiModel
 
     fun build(config: ConfigData) {
         solarEdgeModel = SolarEdgeModel(config.solarEdgeConfig.siteID, config.solarEdgeConfig.apiKey)
         val ecoForest = config.ecoForestConfig
         ecoForestModel = EcoForestModel(ecoForest.server, ecoForest.port, ecoForest.serialNumber, ecoForest.authKey)
+        val myEnergi = config.myEnergiConfig
+        myEnergiModel = MyEnergiModel(myEnergi.username, myEnergi.apiKey, myEnergi.oldSerialNumbers)
     }
 
     suspend fun refresh(){
         solarEdgeModel.refresh()
+        ecoForestModel.refresh()
+        myEnergiModel.refresh()
     }
 }
 

@@ -9,7 +9,7 @@ class EcoForestModel(server: String, port: String, serialNumber: String, authKey
             debugSSL = true
         )
 
-    fun refresh(): EcoforestStatus{
+    override suspend fun refresh(): EcoforestStatus{
         return client.getCurrentStatus()
     }
 }
