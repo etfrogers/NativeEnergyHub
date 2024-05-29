@@ -89,6 +89,13 @@ class StatusViewModel(
             }
         }
     }
+
+    fun clearErrors(){
+        _uiState.update { currentState ->
+            currentState.errors = listOf()
+            currentState
+        }
+    }
 }
 
 val EcoforestStatus.dhwPower: UnitValue<Float>
@@ -119,7 +126,7 @@ data class StatusUiState(
     val heatPump = dataOrEmpty(heatPumpResource, ::EcoforestStatus)
     val diverter = dataOrEmpty(diverterResource, ::emptySystem)
 
-    val errors = listOf(
+    var errors = listOf(
         solarResource,
         heatPumpResource,
         diverterResource).mapNotNull {
