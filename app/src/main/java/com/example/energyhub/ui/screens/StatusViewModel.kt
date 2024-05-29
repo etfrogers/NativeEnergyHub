@@ -64,33 +64,45 @@ class StatusViewModel(
     }
 
     private fun refreshSolar(): Job {
+        _uiState.update {
+            it.copy(isSolarStale = true)
+        }
         return viewModelScope.launch(context = Dispatchers.IO) {
             val status = solarModel.refresh()
             _uiState.update { currentState ->
                 currentState.copy(
-                    solarResource = status
+                    solarResource = status,
+                    isSolarStale = status is Resource.Error,
                 )
             }
         }
     }
 
     private fun refreshHeatPump(): Job {
+        _uiState.update {
+            it.copy(isHeatPumpStale = true)
+        }
         return viewModelScope.launch(context = Dispatchers.IO) {
             val status = heatPumpModel.refresh()
             _uiState.update { currentState ->
                 currentState.copy(
-                    heatPumpResource = status
+                    heatPumpResource = status,
+                    isHeatPumpStale = status is Resource.Error,
                 )
             }
         }
     }
 
     private fun refreshDiverter(): Job {
+        _uiState.update {
+            it.copy(isDiverterStale = true)
+        }
         return viewModelScope.launch(context = Dispatchers.IO) {
             val status = diverterModel.refresh()
             _uiState.update { currentState ->
                 currentState.copy(
-                    diverterResource = status
+                    diverterResource = status,
+                    isDiverterStale = status is Resource.Error,
                 )
             }
         }
@@ -145,6 +157,9 @@ data class StatusUiState(
     val solarResource: Resource<SolarStatus> = Resource.Success(SolarStatus()),
     val heatPumpResource: Resource<EcoforestStatus> = Resource.Success(EcoforestStatus()),
     val diverterResource: Resource<MyEnergiSystem> = Resource.Success(MyEnergiSystem()),
+    val isSolarStale: Boolean = true,
+    val isHeatPumpStale: Boolean = true,
+    val isDiverterStale: Boolean = true,
 ) {
     val solar = dataOrEmpty(solarResource, ::SolarStatus)
     val heatPump = dataOrEmpty(heatPumpResource, ::EcoforestStatus)

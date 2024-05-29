@@ -182,13 +182,13 @@ fun CurrentStatusScreen(
 
 @Composable
 fun CurrentStatusLayout (
-    statusUiState: StatusUiState,
+    state: StatusUiState,
     modifier: Modifier = Modifier,
     darkTheme:Boolean = Config.isAppInDarkTheme(isSystemInDarkTheme())
 ) {
-    val solar = statusUiState.solar
-    val heatPump = statusUiState.heatPump
-    val diverter = statusUiState.diverter
+    val solar = state.solar
+    val heatPump = state.heatPump
+    val diverter = state.diverter
     Surface(modifier = modifier.fillMaxSize()) {
 
         ConstraintLayout(
@@ -224,6 +224,7 @@ fun CurrentStatusLayout (
                 )}
             PowerLabel(
                 power = solar.solarProduction,
+                isStale = state.isSolarStale,
                 modifier = Modifier.constrainAs(solarLabel) {
                     top.linkTo(parent.top, margin = 12.dp)
                     start.linkTo(parent.start)
@@ -269,6 +270,7 @@ fun CurrentStatusLayout (
             )
             PercentLabel(
                 value = solar.batteryLevel.toFloat(),
+                isStale = state.isSolarStale,
                 modifier = Modifier.constrainAs(batteryLabel) {
                     start.linkTo(battery.start)
                     end.linkTo(battery.end)
@@ -282,6 +284,7 @@ fun CurrentStatusLayout (
                     ecoColor
                 else nonEcoColor,
                 reverseArrow = solar.isBatteryCharging,
+                isStale = state.isSolarStale,
                 modifier = Modifier.constrainAs(batteryArrow) {
                     bottom.linkTo(solarArrow.bottom)
                     end.linkTo(solarArrow.start)
@@ -293,6 +296,7 @@ fun CurrentStatusLayout (
                 power = solar.gridPower,
                 activeColor = if (solar.isGridExporting) ecoColor else nonEcoColor,
                 reverseArrow = !solar.isGridExporting,
+                isStale = state.isSolarStale,
                 modifier = Modifier.constrainAs(gridArrow) {
                     bottom.linkTo(solarArrow.bottom)
                     start.linkTo(solarArrow.start)
@@ -316,6 +320,7 @@ fun CurrentStatusLayout (
                 length = 70.dp,
                 power = solar.load,
                 activeColor = loadColor,
+                isStale = state.isSolarStale,
                 modifier = Modifier.constrainAs(homeArrow) {
                     start.linkTo(solarArrow.start)
                     top.linkTo(solarArrow.bottom)
@@ -346,7 +351,7 @@ fun CurrentStatusLayout (
             LabelledArrow(
                 angle = 0f,
                 length = 80.dp,
-                power = statusUiState.remainingPower,
+                power = state.remainingPower,
                 activeColor = loadColor,
                 modifier = Modifier.constrainAs(loadArrow){
                     bottom.linkTo(fromHomeArrow.bottom)
@@ -369,6 +374,7 @@ fun CurrentStatusLayout (
                 length = armLength,
                 power = heatPump.dhwPower.value,
                 activeColor = loadColor,
+                isStale = state.isHeatPumpStale,
                 modifier = Modifier.constrainAs(dhwArrow){
                     bottom.linkTo(fromHomeArrow.bottom)
                     end.linkTo(fromHomeArrow.end)
@@ -392,6 +398,7 @@ fun CurrentStatusLayout (
                 setPoint = heatPump.dhwSetpoint,
                 offset = heatPump.dhwOffset,
                 decimalPlaces = 1,
+                isStale = state.isHeatPumpStale,
                 modifier = Modifier.constrainAs(dhwLabel){
                     start.linkTo(dhw.start)
                     end.linkTo(dhw.end, margin = (-24).dp)
@@ -401,7 +408,7 @@ fun CurrentStatusLayout (
             PowerArrow(
                 angle = 90f,
                 length = 110.dp,
-                power = statusUiState.bottomArmsPower,
+                power = state.bottomArmsPower,
                 activeColor = loadColor,
                 modifier = Modifier.constrainAs(bottomArmsArrow){
                     top.linkTo(fromHomeArrow.bottom)
@@ -413,6 +420,7 @@ fun CurrentStatusLayout (
                 length = armLength,
                 power = heatPump.heatingPower.value,
                 activeColor = loadColor,
+                isStale = state.isHeatPumpStale,
                 modifier = Modifier.constrainAs(heatingArrow){
                     bottom.linkTo(bottomArmsArrow.bottom)
                     end.linkTo(bottomArmsArrow.end)
@@ -437,6 +445,7 @@ fun CurrentStatusLayout (
                 setPoint = heatPump.heatingBufferSetpoint,
                 offset = heatPump.heatingBufferOffset,
                 decimalPlaces = 1,
+                isStale = state.isHeatPumpStale,
                 modifier = Modifier.constrainAs(heatingLabel){
                     start.linkTo(heating.start)
                     end.linkTo(heating.end, margin = (-24).dp)
@@ -448,6 +457,7 @@ fun CurrentStatusLayout (
                 length = 80.dp,
                 power = diverter.immersionPower,
                 activeColor = loadColor,
+                isStale = state.isDiverterStale,
                 modifier = Modifier.constrainAs(immersionArrow){
                     bottom.linkTo(bottomArmsArrow.bottom)
                     start.linkTo(bottomArmsArrow.end)
@@ -469,6 +479,7 @@ fun CurrentStatusLayout (
                 length = 70.dp,
                 power = diverter.carPower,
                 activeColor = loadColor,
+                isStale = state.isDiverterStale,
                 modifier = Modifier.constrainAs(carArrow){
                     top.linkTo(bottomArmsArrow.bottom)
                     start.linkTo(bottomArmsArrow.start)

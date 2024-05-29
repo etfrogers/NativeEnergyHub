@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposePath
@@ -76,7 +77,6 @@ fun Arrow(
         modifier = modifier
             .width(width)
             .height(height)
-            .background(color = Color.LightGray)
     ) {
         val endX = vector.endX.value * density
         val endY = vector.endY.value * density
@@ -174,6 +174,7 @@ fun UnitLabel(
     isVertical: Boolean = false,
     setPoint: UnitValue<Float>? = null,
     offset: UnitValue<Float>? = null,
+    isStale: Boolean = false,
 ){
     if (offset != null) {
         assert(offset.unit == value.unit)
@@ -190,7 +191,8 @@ fun UnitLabel(
         decimalPlaces = decimalPlaces,
         isVertical = isVertical,
         offset = offset?.value,
-        setPoint = setPoint?.value
+        setPoint = setPoint?.value,
+        isStale = isStale,
         )
 }
 
@@ -204,6 +206,7 @@ fun PowerLabel(
     isVertical: Boolean = false,
     setPoint: Float? = null,
     offset: Float? = null,
+    isStale: Boolean = false,
 ){
     val labelSep = (if (isVertical) '\n' else ' ')
     val unitLabel = labelSep + unit
@@ -221,7 +224,7 @@ fun PowerLabel(
         text = string,
         style = typography.labelLarge,
         textAlign = TextAlign.Center,
-        modifier = modifier,
+        modifier = modifier.alpha(if(isStale) 0.5f else 1f),
     )
 }
 
@@ -229,12 +232,14 @@ fun PowerLabel(
 fun PercentLabel(
     value: Float,
     modifier: Modifier = Modifier,
+    isStale: Boolean = false,
     ){
     PowerLabel(
         power = value,
         unit = "%",
         conversionFactor = 1f,
         decimalPlaces = 0,
+        isStale = isStale,
         modifier = modifier
     )
 }
@@ -247,10 +252,10 @@ fun LabelledArrow(
     activeColor: Color,
     modifier: Modifier = Modifier,
     reverseArrow: Boolean = false,
+    isStale: Boolean = false,
 ) {
 
     val isVertical = angle !in arrayOf(0f, 180f)
-//    is_stale: None
     if (isVertical) {
         Row(
             modifier = modifier,
@@ -267,6 +272,7 @@ fun LabelledArrow(
             PowerLabel(
                 power = power,
                 isVertical = isVertical,
+                isStale = isStale,
             )
         }
     } else {
@@ -277,6 +283,7 @@ fun LabelledArrow(
             PowerLabel(
                 power = power,
                 isVertical = isVertical,
+                isStale = isStale,
             )
             PowerArrow(
                 angle = angle,
@@ -293,7 +300,7 @@ fun LabelledArrow(
 @Preview(showBackground = true)
 @Composable
 fun ArrowPreview() {
-    EnergyHubTheme {
+    EnergyHubTheme(darkTheme = false) {
         ConstraintLayout (modifier = Modifier.fillMaxSize()){
             // Create references for the composables to constrain
             val (arrow, arrow2, arrow3, arrow4, arrow5, arrow6, arrow7, arrow8) = createRefs()
@@ -386,6 +393,7 @@ fun ArrowPreview() {
                 length = 100.dp,
                 activeColor = colorResource(id = R.color.non_eco),
                 power = 300f,
+                isStale = true,
                 modifier = Modifier.constrainAs(arrow6){
                     top.linkTo(middle, margin = 110.dp)
                     start.linkTo(parent.start, margin = 25.dp)
