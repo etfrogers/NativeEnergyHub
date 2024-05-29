@@ -50,23 +50,17 @@ class StatusViewModel(
         isRefreshing = true
         viewModelScope.launch(context = Dispatchers.IO) {
             try {
-                val solarStatus = async { solarModel.refresh() }
-                val heatPumpStatus = async { heatPumpModel.refresh() }
-                val diverterStatus = async { diverterModel.refresh() }
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        solarResource = solarStatus.await(),
-                        heatPumpResource = heatPumpStatus.await(),
-                        diverterResource = diverterStatus.await(),
-                    )
-                }
+                val j1 = refreshSolar()
+                val j2 = refreshHeatPump()
+                val j3 = refreshDiverter()
+                j1.join()
+                j2.join()
+                j3.join()
             } finally {
                 Log.d(TAG, "Finishing refresh")
                 isRefreshing = false
             }
         }
-//        refreshSolar()
-//        refreshHeatPump()
     }
 
     private fun refreshSolar(): Job {
@@ -80,13 +74,23 @@ class StatusViewModel(
         }
     }
 
-    private fun refreshHeatPump() {
-        viewModelScope.launch(context = Dispatchers.IO) {
+    private fun refreshHeatPump(): Job {
+        return viewModelScope.launch(context = Dispatchers.IO) {
             val status = heatPumpModel.refresh()
-//            _uiState.value.heatPump = status
             _uiState.update { currentState ->
                 currentState.copy(
                     heatPumpResource = status
+                )
+            }
+        }
+    }
+
+    private fun refreshDiverter(): Job {
+        return viewModelScope.launch(context = Dispatchers.IO) {
+            val status = diverterModel.refresh()
+            _uiState.update { currentState ->
+                currentState.copy(
+                    diverterResource = status
                 )
             }
         }
