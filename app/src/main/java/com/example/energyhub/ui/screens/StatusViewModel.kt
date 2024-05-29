@@ -21,12 +21,13 @@ import com.example.energyhub.model.emptySystem
 import com.example.energyhub.model.immersionPower
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Timer
+import kotlin.concurrent.timerTask
 
 internal const val TAG = "StatusViewModel"
 
@@ -42,7 +43,13 @@ class StatusViewModel(
 
     init {
         Log.d(TAG, "Initialising...")
-        refresh()
+        Timer().schedule(timerTask {
+            refreshSolar()
+            refreshDiverter()
+        },0,10_000)
+        Timer().schedule(timerTask {
+            refreshHeatPump()
+        },0,60_000)
     }
 
     fun refresh(){
