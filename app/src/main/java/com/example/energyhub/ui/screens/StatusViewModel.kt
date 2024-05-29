@@ -1,11 +1,12 @@
 package com.example.energyhub.ui.screens
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.etfrogers.ecoforestklient.EcoforestStatus
 import com.etfrogers.ecoforestklient.UnitValue
 import com.etfrogers.myenergiklient.MyEnergiSystem
@@ -14,6 +15,7 @@ import com.example.energyhub.model.MyEnergiModel
 import com.example.energyhub.model.Resource
 import com.example.energyhub.model.SolarEdgeModel
 import com.example.energyhub.model.SolarStatus
+import com.example.energyhub.model.SystemModel
 import com.example.energyhub.model.carPower
 import com.example.energyhub.model.emptySystem
 import com.example.energyhub.model.immersionPower
@@ -96,6 +98,24 @@ class StatusViewModel(
             currentState
         }
     }
+
+    companion object {
+
+        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(
+                modelClass: Class<T>,
+                extras: CreationExtras
+            ): T {
+                return StatusViewModel(
+                    solarModel = SystemModel.solarEdgeModel,
+                    heatPumpModel = SystemModel.ecoForestModel,
+                    diverterModel = SystemModel.myEnergiModel,
+                ) as T
+            }
+        }
+    }
+
 }
 
 val EcoforestStatus.dhwPower: UnitValue<Float>

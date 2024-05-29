@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.etfrogers.ecoforestklient.EcoforestStatus
 import com.etfrogers.ecoforestklient.UnitValue
 import com.example.energyhub.R
@@ -138,8 +139,8 @@ private fun showError(snackbarHostState: SnackbarHostState,
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CurrentStatusScreen(
-    statusViewModel: StatusViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    statusViewModel: StatusViewModel = viewModel(factory = StatusViewModel.Factory)
 ){
     val statusUiState by statusViewModel.uiState.collectAsState()
     var showErrorLog by remember { mutableStateOf(false) }

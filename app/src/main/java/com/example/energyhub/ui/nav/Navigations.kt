@@ -17,13 +17,7 @@ fun Navigation(
 ) {
     NavHost(navController, startDestination = NavigationItem.CurrentStatus.route) {
         composable(NavigationItem.CurrentStatus.route) {
-            CurrentStatusScreen(
-                StatusViewModel(
-                    solarModel = SystemModel.solarEdgeModel,
-                    heatPumpModel = SystemModel.ecoForestModel,
-                    diverterModel = SystemModel.myEnergiModel,
-                )
-            )
+            CurrentStatusScreen()
         }
         composable(NavigationItem.History.route) {
             HistoryScreen()
