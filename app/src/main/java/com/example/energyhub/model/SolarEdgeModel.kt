@@ -1,10 +1,11 @@
 package com.example.energyhub.model
 
 import com.etfrogers.ksolaredge.SolarEdgeApi
-import com.etfrogers.ksolaredge.SolarEdgeApiService
 import com.etfrogers.ksolaredge.serialisers.Connection
-import com.etfrogers.ksolaredge.serialisers.FlowData
-import com.etfrogers.ksolaredge.serialisers.SitePowerFlow
+import com.etfrogers.ksolaredge.serialisers.StorageData
+import com.etfrogers.ksolaredge.serialisers.Telemetry
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 enum class BatteryChargeState {
     HIGH, MEDIUM, LOW
@@ -46,12 +47,12 @@ class SolarStatus (
     }
 }
 
-class SolarEdgeModel (siteID: String, apiKey: String) : BaseModel<SolarStatus>() {
-    private val service: SolarEdgeApiService = SolarEdgeApi(siteID, apiKey).retrofitService
+class SolarEdgeModel(siteID: String, apiKey: String) : BaseModel<SolarStatus>() {
+    private val client = SolarEdgeApi(siteID, apiKey)
 
 //    @popup_on_error('SolarEdge', cleanup_function=BaseModel._finish_refresh)
     override suspend fun refreshUnsafe(): SolarStatus {
-        val powerFlowData = getCurrentPowerFlow().siteCurrentPowerFlow
+        val powerFlowData = client.getPowerFlow()
         val conversionFactor = 1000
         if (powerFlowData.unit != "kW") {
             throw NotImplementedError()
@@ -66,10 +67,64 @@ class SolarEdgeModel (siteID: String, apiKey: String) : BaseModel<SolarStatus>()
             isGridExporting = Connection(from = "LOAD", to = "Grid") in powerFlowData.connections,
         )
     }
-    private suspend fun getCurrentPowerFlow(): SitePowerFlow {
-        return service.getPowerFlow()
+
+    suspend fun getBatteryHistoryForDate(date: LocalDate): StorageData {
+        return client.getBatteryHistoryForDay(date)
+    }
+
+    override suspend fun getHistoryForDateUnsafe(date: LocalDate): SolarHistory {
+        val energyData = client.getEnergyForDay(date)
+        assert(energyData.unit == "Wh")
+        assert(energyData.timeUnit == "DAY")
+        val energyMeters = energyData.meters
+        assert(energyMeters.timestamps.size == 1)
+        assert(energyMeters.consumption!!.size == 1)
+        assert(energyMeters.feedIn!!.size == 1)
+        assert(energyMeters.purchased!!.size == 1)
+        assert(energyMeters.production!!.size == 1)
+
+
+        val powerData = client.getPowerHistoryForDay(date)
+        assert(powerData.unit == "W")
+        assert(powerData.timeUnit == "QUARTER_OF_AN_HOUR")
+        val powerMeters = powerData.meters
+        val n = powerMeters.timestamps.size
+        return SolarHistory(
+            timestamps = powerMeters.timestamps,
+            import = nullToZero(powerMeters.purchased, n),
+            consumption = nullToZero(powerMeters.consumption, n),
+            generation = nullToZero(powerMeters.production, n),
+            export = nullToZero(powerMeters.feedIn, n),
+            totalExport = energyMeters.feedIn!![0]!!,
+            totalConsumption = energyMeters.consumption!![0]!!,
+            totalGeneration = energyMeters.production!![0]!!,
+            totalImport = energyMeters.purchased!![0]!!,
+            )
     }
 }
+
+fun nullToZero(list: List<Float?>?, length: Int): List<Float>{
+    return list?.map { it ?: 0f } ?: List(length) { 0f }
+}
+
+class SolarHistory(
+    timestamps: List<LocalDateTime> = listOf(),
+    val export: List<Float> = listOf(),
+    val consumption: List<Float> = listOf(),
+    val generation: List<Float> = listOf(),
+    val import: List<Float> = listOf(),
+    val totalExport: Float = 0f,
+    val totalImport: Float = 0f,
+    val totalConsumption: Float = 0f,
+    val totalGeneration: Float = 0f,
+): HistoryData(timestamps)
+
+val Telemetry.totalChargeFromGrid: Float
+    get() = chargeEnergyFromGrid.sum()
+val Telemetry.totalDischarge: Float
+    get() = integratePowers(dischargePower, timestamps)
+val Telemetry.totalChargeFromSolar: Float
+    get() = integratePowers(chargePowerFromSolar, timestamps)
 
 /*
 from datetime import datetime

@@ -1,6 +1,8 @@
 package com.example.energyhub.model
 
 import android.util.Log
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 abstract class BaseModel<StatusType>(
     var stale: Boolean = true,
@@ -15,9 +17,23 @@ abstract class BaseModel<StatusType>(
         }
     }
 
+    suspend fun getHistoryForDate(date: LocalDate): Resource<HistoryData> {
+        return try {
+            Resource.Success(getHistoryForDateUnsafe(date))
+        } catch (e: Exception){
+            Log.d("History Refresh Error", "${e::class.simpleName}: ${e.message}", e)
+            Resource.Error(e.toErrorType())
+        }
+    }
+
     protected abstract suspend fun refreshUnsafe(): StatusType
 
+    protected abstract suspend fun getHistoryForDateUnsafe(date: LocalDate): HistoryData
 }
+
+abstract class HistoryData(
+    val timestamps: List<LocalDateTime>
+)
 
 fun Exception.toErrorType() = ErrorType.Unknown(this)
 // when (this.code) {
@@ -45,6 +61,15 @@ sealed class ErrorType(exception: Exception) {
     class Unknown(exception: Exception): ErrorType(exception)
     // other categories of Error
 }
+
+internal fun <T> dataOrEmpty(resource: Resource<T>, emptyMaker:()->T): T {
+    return if (resource is Resource.Success){
+        resource.data
+    } else {
+        emptyMaker()
+    }
+}
+
 /*
 import datetime
 from abc import ABC, abstractmethod

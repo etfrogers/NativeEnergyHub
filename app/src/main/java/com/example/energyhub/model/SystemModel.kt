@@ -10,7 +10,7 @@ object SystemModel {
     lateinit var myEnergiModel: MyEnergiModel
 
     fun build(config: ConfigData) {
-        solarEdgeModel = SolarEdgeModel(config.solarEdgeConfig.siteID, config.solarEdgeConfig.apiKey)
+        solarEdgeModel = SolarEdgeModel(config.solarEdgeConfig.siteID, config.solarEdgeConfig.siteApiKey)
         val ecoForest = config.ecoForestConfig
         ecoForestModel = EcoForestModel(ecoForest.server, ecoForest.port, ecoForest.serialNumber, ecoForest.authKey)
         val myEnergi = config.myEnergiConfig

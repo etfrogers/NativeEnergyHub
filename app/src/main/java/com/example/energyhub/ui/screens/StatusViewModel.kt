@@ -15,8 +15,8 @@ import com.example.energyhub.model.MyEnergiModel
 import com.example.energyhub.model.Resource
 import com.example.energyhub.model.SolarEdgeModel
 import com.example.energyhub.model.SolarStatus
-import com.example.energyhub.model.SystemModel
 import com.example.energyhub.model.carPower
+import com.example.energyhub.model.dataOrEmpty
 import com.example.energyhub.model.emptySystem
 import com.example.energyhub.model.immersionPower
 import kotlinx.coroutines.Dispatchers
@@ -121,24 +121,6 @@ class StatusViewModel(
             currentState
         }
     }
-
-    companion object {
-
-        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(
-                modelClass: Class<T>,
-                extras: CreationExtras
-            ): T {
-                return StatusViewModel(
-                    solarModel = SystemModel.solarEdgeModel,
-                    heatPumpModel = SystemModel.ecoForestModel,
-                    diverterModel = SystemModel.myEnergiModel,
-                ) as T
-            }
-        }
-    }
-
 }
 
 val EcoforestStatus.dhwPower: UnitValue<Float>
@@ -185,12 +167,5 @@ data class StatusUiState(
     val bottomArmsPower: Float
         get() = diverter.immersionPower + diverter.carPower + heatPump.heatingPower.value
 
-    private fun <T> dataOrEmpty(resource: Resource<T>, emptyMaker:()->T): T {
-        return if (resource is Resource.Success){
-            resource.data
-        } else {
-            emptyMaker()
-        }
-    }
 }
 

@@ -4,6 +4,7 @@ import com.etfrogers.myenergiklient.Eddi
 import com.etfrogers.myenergiklient.MyEnergiClient
 import com.etfrogers.myenergiklient.MyEnergiSystem
 import com.etfrogers.myenergiklient.Zappi
+import kotlinx.datetime.LocalDate
 
 class MyEnergiModel(username: String,
                     password: String,
@@ -13,6 +14,10 @@ class MyEnergiModel(username: String,
     private val client: MyEnergiClient = MyEnergiClient (username, password, invalidSerials)
     override suspend fun refreshUnsafe(): MyEnergiSystem {
         return client.getCurrentStatus()
+    }
+
+    override suspend fun getHistoryForDateUnsafe(date: LocalDate): HistoryData {
+        TODO("Not yet implemented")
     }
 }
 

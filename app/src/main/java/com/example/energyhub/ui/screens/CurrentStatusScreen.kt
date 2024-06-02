@@ -140,7 +140,7 @@ private fun showError(snackbarHostState: SnackbarHostState,
 @Composable
 fun CurrentStatusScreen(
     modifier: Modifier = Modifier,
-    statusViewModel: StatusViewModel = viewModel(factory = StatusViewModel.Factory)
+    statusViewModel: StatusViewModel = viewModel(factory = ViewModelFactory.StatusFactory)
 ){
     val statusUiState by statusViewModel.uiState.collectAsState()
     var showErrorLog by remember { mutableStateOf(false) }

@@ -2,6 +2,7 @@ package com.example.energyhub.model
 
 import com.etfrogers.ecoforestklient.EcoForestClient
 import com.etfrogers.ecoforestklient.EcoforestStatus
+import kotlinx.datetime.LocalDate
 
 class EcoForestModel(server: String, port: String, serialNumber: String, authKey: String,): BaseModel<EcoforestStatus>() {
     private val client: EcoForestClient =
@@ -11,5 +12,9 @@ class EcoForestModel(server: String, port: String, serialNumber: String, authKey
 
     override suspend fun refreshUnsafe(): EcoforestStatus {
         return client.getCurrentStatus()
+    }
+
+    override suspend fun getHistoryForDateUnsafe(date: LocalDate): HistoryData {
+        TODO("Not yet implemented")
     }
 }
