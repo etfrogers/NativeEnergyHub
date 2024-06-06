@@ -72,6 +72,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
     implementation("com.charleskorn.kaml:kaml:0.59.0")
     implementation("io.github.rburgst:okhttp-digest:3.1.0")
+    implementation(libs.vico.compose)
+    implementation(libs.vico.compose.m3)
+    implementation(libs.vico.core)
 
 
     testImplementation(libs.junit)
