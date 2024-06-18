@@ -5,15 +5,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.etfrogers.ksolaredge.serialisers.Battery
+import com.etfrogers.ksolaredge.serialisers.Telemetry
+import com.example.energyhub.model.BatteryHistory
 import com.example.energyhub.model.Config
 import com.example.energyhub.model.EcoForestModel
+import com.example.energyhub.model.ErrorType
+import com.example.energyhub.model.HeatPumpDay
 import com.example.energyhub.model.MyEnergiModel
 import com.example.energyhub.model.Resource
 import com.example.energyhub.model.SolarEdgeModel
 import com.example.energyhub.model.SolarHistory
-import com.example.energyhub.model.dataOrEmpty
+import com.example.energyhub.model.div
+import com.example.energyhub.model.mapInPlace
+import com.example.energyhub.model.plus
+import com.example.energyhub.model.minus
+import com.example.energyhub.model.toHours
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,55 +31,258 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 
 class HistoryViewModel(
     private val solarModel: SolarEdgeModel,
     private val heatPumpModel: EcoForestModel,
     private val diverterModel: MyEnergiModel,
+    private val timezone: TimeZone,
     ): ViewModel() {
-    private val _uiState = MutableStateFlow(HistoryUiState())
+    private val _uiState = MutableStateFlow(HistoryUiState(timezone=timezone))
     val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
-    var date by mutableStateOf(Clock.System.todayIn(Config.location.timezone))
+    private var date by mutableStateOf(Clock.System.todayIn(Config.location.timezone))
 
     init {
         getHistory()
     }
 
-    private fun getHistory(){
+    private fun getHistory() {
         // read from this thread to avoid reading in from IO thread
         val date = date
+        var solarResource: Resource<SolarHistory>
+        var heatPumpResource: Resource<HeatPumpDay>
+        var batteryResource: Resource<BatteryHistory>
         viewModelScope.launch(context = Dispatchers.IO) {
-            try {
-                val j1 = refreshSolarHistory(date)
-//                val j2 = refreshHeatPump()
+            val solarDeferred = getSolarHistory(date)
+            val hpDeferred = getHeatPumpHistory(date)
+            val batteryDeferred = getBatteryHistory(date)
+
 //                val j3 = refreshDiverter()
-                j1.join()
-//                j2.join()
+            solarResource = solarDeferred.await()
+            heatPumpResource = hpDeferred.await()
+            batteryResource = batteryDeferred.await()
 //                j3.join()
-            } finally {
-//                Log.d(TAG, "Finishing refresh")
-//                isRefreshing = false
-            }
+            buildStatus(solarResource, heatPumpResource, batteryResource)
         }
     }
 
-    private fun refreshSolarHistory(date: LocalDate): Job {
-        return viewModelScope.launch(context = Dispatchers.IO) {
-            val status = solarModel.getHistoryForDate(date)
+    @Suppress("ConvertArgumentToSet")
+    private fun buildStatus(
+        solarResource: Resource<SolarHistory>,
+        heatPumpResource: Resource<HeatPumpDay>,
+        batteryResource: Resource<BatteryHistory>
+    ) {
+        val errors = listOf(
+            solarResource,
+            heatPumpResource,
+            batteryResource,
+//                diverterResource
+        ).mapNotNull {
+            if (it is Resource.Error) it.error else null
+        }
+        if (solarResource is Resource.Error) {
             _uiState.update { currentState ->
-                @Suppress("UNCHECKED_CAST")
                 currentState.copy(
-                    solarResource = status as Resource<SolarHistory>,
-//                    isSolarStale = status is Resource.Error,
+                    errors = errors,
                 )
             }
+            return
+        }
+        val solar = (solarResource as Resource.Success<SolarHistory>).data
+        val heatPump = (heatPumpResource as Resource.Success<HeatPumpDay>).data
+        val battery = (batteryResource as? Resource.Success<BatteryHistory>)?.data ?: BatteryHistory()
+        val generationPower = solar.generation
+        val consumptionPower = solar.consumption
+        val exportPower = solar.export
+        val importPower = solar.import
+
+        val refTimestamps = solar.timestamps
+        /*
+        val car_charge_power = normaliseToTimestamps(ref_timestamps, zappi_timestamps,
+                                                   zappi_powers['total_power'])
+        immersion_power = normaliseToTimestamps(ref_timestamps, eddi_timestamps,
+                                                  eddi_powers['total_power'])
+                                                  */
+        val dhwPower = normaliseToTimestamps(refTimestamps, heatPump.timestamps, heatPump.dhwPower)
+        val heatingPower = normaliseToTimestamps(
+            refTimestamps, heatPump.timestamps,
+            heatPump.heatingPower
+        )
+        val legionnairesPower = normaliseToTimestamps(
+            refTimestamps, heatPump.timestamps,
+            heatPump.legionnairesPower
+        )
+        val combinedPower = normaliseToTimestamps(
+            refTimestamps, heatPump.timestamps,
+            heatPump.combinedPower
+        )
+        val unknownHeatPumpPower = normaliseToTimestamps(
+            refTimestamps, heatPump.timestamps,
+            heatPump.unknownPower
+        )
+        val batteryGridCharging = normaliseToTimestamps(
+            refTimestamps, battery.timestamps,
+            battery.chargePowerFromGrid
+        )
+        val batterySolarCharging = normaliseToTimestamps(
+            refTimestamps, battery.timestamps,
+            battery.chargePowerFromSolar
+        )
+        val batteryDischarging = normaliseToTimestamps(
+            refTimestamps, battery.timestamps,
+            battery.dischargePower
+        )
+        val batteryStateFull = normaliseToTimestamps(
+            refTimestamps, battery.timestamps,
+            battery.chargePercentage
+        )
+        val batteryState = batteryStateFull.zip(refTimestamps).mapNotNull {
+            (value, ts) ->  if (ts <= battery.timestamps.last()) value else null}
+
+
+        val otherConsumption = consumptionPower - (/*car_charge_power + immersion_power + */
+                dhwPower + heatingPower
+                + legionnairesPower + combinedPower + unknownHeatPumpPower
+                + batteryGridCharging)
+
+        val solarProduction = generationPower + batterySolarCharging - batteryDischarging
+        val solarConsumption = solarProduction - (exportPower + batterySolarCharging)
+
+        var totalConsumption = if (battery.totalChargeFromGrid > 0f) {
+            solar.totalConsumption + (battery.storedEnergy.last() - battery.storedEnergy.first())
+        }
+        else {
+            solar.totalConsumption
+        }
+        val batteryDischargeEnergy = battery.totalDischarge
+        val solarProductionEnergy = solar.totalGeneration
+        val exportEnergy = solar.totalExport
+        val batterySolarChargingEnergy = battery.totalChargeFromSolar
+        val solarConsumptionEnergy = (solarProductionEnergy
+                                    - (exportEnergy + batterySolarChargingEnergy))
+
+        val remainingEnergy = (solar.totalConsumption
+                            - (heatPump.heatingEnergy
+                               + heatPump.dhwEnergy
+                               + heatPump.legionnairesEnergy
+                               + heatPump.combinedEnergy
+                               + heatPump.unknownEnergy
+//                               + zappi_powers['total_energy
+//                               + eddi_powers['total_energy
+                               )
+                            )
+
+        _uiState.update { currentState ->
+            currentState.copy(
+                timestamps = refTimestamps,
+                totalSelfConsumptionEnergy = solarConsumptionEnergy,
+                netBatteryChargeFromSolar = batterySolarChargingEnergy,
+                netBatteryChargeFromGrid = battery.totalChargeFromGrid, // TODO probably wrong!!
+                totalExport = solar.totalExport,
+                batteryPercentage = batteryState,
+                timezone = timezone,
+            )
+        }
+
+    }
+
+    private fun getSolarHistory(date: LocalDate): Deferred<Resource<SolarHistory>> {
+        return viewModelScope.async(context = Dispatchers.IO) {
+            solarModel.getHistoryForDate(date)
+        }
+    }
+
+    private fun getHeatPumpHistory(date: LocalDate): Deferred<Resource<HeatPumpDay>> {
+        return viewModelScope.async(context = Dispatchers.IO) {
+            heatPumpModel.getHistoryForDate(date)
+        }
+    }
+
+    private fun getBatteryHistory(date: LocalDate): Deferred<Resource<BatteryHistory>> {
+        return viewModelScope.async(context = Dispatchers.IO) {
+            solarModel.getBatteryHistoryForDate(date)
         }
     }
 }
 
+enum class NormalisationMode {
+    MIDPOINT,
+    PRECEDING,
+    FOLLOWING
+}
+
+private fun normaliseToTimestamps(
+    refTimestamps: List<LocalDateTime>,
+    dataTimestamps: List<LocalDateTime>,
+    data: List<Float>,
+    mode: NormalisationMode = NormalisationMode.PRECEDING,
+    timezone: TimeZone = Config.location.timezone,
+    ): List<Float> {
+    val refHours = refTimestamps.toHours(timezone)
+    val dataHours = dataTimestamps.toHours(timezone)
+    val binEdges = when (mode) {
+        NormalisationMode.MIDPOINT -> refHours.drop(1).zip(refHours.dropLast(1)).map { (z, e) -> (z+e)/2 }
+        NormalisationMode.PRECEDING -> refHours.drop(1)
+        NormalisationMode.FOLLOWING -> refHours.dropLast(1)
+    }
+    // 0 and max(data) are implicit bin_edges in np.digitize
+    val binIndices = digitize(dataHours, binEdges)
+    val countsPerBin = bincount(binIndices, minLength=refTimestamps.size)
+    val totalDataInBin = bincount(binIndices, weights=data, minLength=refTimestamps.size)
+    val meanDataInBin = (totalDataInBin / countsPerBin).toMutableList()
+    meanDataInBin.mapInPlace { if(it.isNaN()) 0f else it }
+    return meanDataInBin
+}
+
+fun digitize(data: List<Float>, binEdges: List<Float>): List<Int> {
+    val indices = Array(data.size) {0}
+    var edgeIndex = 0
+    for (i in data.indices){
+        while (edgeIndex < binEdges.size && data[i] > binEdges[edgeIndex])
+        {
+            edgeIndex++
+        }
+        indices[i] = edgeIndex
+    }
+    return indices.toList()
+}
+
+private fun bincount(binIndices: List<Int>, minLength: Int? = null): List<Int> {
+
+    val counts = Array(minLength?: binIndices.max()) { 0 }
+    binIndices.forEach { counts[it] += 1 }
+    return counts.toList()
+}
+
+private fun bincount(binIndices: List<Int>, weights: List<Float>,  minLength: Int? = null): List<Float> {
+    val counts = Array(minLength?: binIndices.max()) { 0f }
+    binIndices.forEachIndexed { origIndex, binIndex -> counts[binIndex] += weights[origIndex] }
+    return counts.toList()
+}
+
+@Suppress("FunctionName")
+fun EmptyBattery() = Battery("", 0f, "", 0, Telemetry())
+
 data class HistoryUiState(
-    val solarResource: Resource<SolarHistory> = Resource.Success(SolarHistory())
+    val timestamps: List<LocalDateTime> = listOf(),
+    val totalSelfConsumptionEnergy: Float = 0f,
+    val netBatteryChargeFromSolar: Float = 0f,
+    val netBatteryChargeFromGrid: Float = 0f,
+    val totalExport: Float = 0f,
+
+    val batteryPercentage: List<Float> = listOf(),
+
+    val errors: List<ErrorType> = listOf(),
+
+    val timezone: TimeZone,
+//    val solarResource: Resource<SolarHistory> = Resource.Success(SolarHistory()),
+//    val batteryResource: Resource<Battery> = Resource.Success(EmptyBattery())
 ){
-    val solar: SolarHistory = dataOrEmpty(solarResource, ::SolarHistory)
+    val fractionalHours: List<Float> by lazy { timestamps.toHours(timezone) }
+
+//    val solar: SolarHistory = dataOrEmpty(solarResource, ::SolarHistory)
+//    val battery: Battery = dataOrEmpty(batteryResource, ::EmptyBattery)
 }

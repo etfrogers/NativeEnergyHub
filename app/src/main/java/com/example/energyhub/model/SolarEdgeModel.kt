@@ -47,7 +47,10 @@ class SolarStatus (
     }
 }
 
-class SolarEdgeModel(siteID: String, apiKey: String) : BaseModel<SolarStatus>() {
+class SolarEdgeModel(
+    siteID: String,
+    apiKey: String
+) : BaseModel<SolarStatus, SolarHistory>() {
     private val client = SolarEdgeApi(siteID, apiKey)
 
 //    @popup_on_error('SolarEdge', cleanup_function=BaseModel._finish_refresh)
@@ -68,8 +71,10 @@ class SolarEdgeModel(siteID: String, apiKey: String) : BaseModel<SolarStatus>() 
         )
     }
 
-    suspend fun getBatteryHistoryForDate(date: LocalDate): StorageData {
-        return client.getBatteryHistoryForDay(date)
+    suspend fun getBatteryHistoryForDate(date: LocalDate): Resource<BatteryHistory> {
+        return wrapAsResource("Battery History") {
+            BatteryHistory.fromStorageData(client.getBatteryHistoryForDay(date))
+        }
     }
 
     override suspend fun getHistoryForDateUnsafe(date: LocalDate): SolarHistory {
@@ -107,8 +112,8 @@ fun nullToZero(list: List<Float?>?, length: Int): List<Float>{
     return list?.map { it ?: 0f } ?: List(length) { 0f }
 }
 
-class SolarHistory(
-    timestamps: List<LocalDateTime> = listOf(),
+data class SolarHistory(
+    val timestamps: List<LocalDateTime> = listOf(),
     val export: List<Float> = listOf(),
     val consumption: List<Float> = listOf(),
     val generation: List<Float> = listOf(),
@@ -117,7 +122,42 @@ class SolarHistory(
     val totalImport: Float = 0f,
     val totalConsumption: Float = 0f,
     val totalGeneration: Float = 0f,
-): HistoryData(timestamps)
+)
+
+data class BatteryHistory(
+    val timestamps: List<LocalDateTime> = listOf(),
+    val chargePowerFromGrid: List<Float> = listOf(),
+    val chargeEnergyFromGrid: List<Float> = listOf(),
+    val chargePowerFromSolar: List<Float> = listOf(),
+    val dischargePower: List<Float> = listOf(),
+    val chargePercentage: List<Float> = listOf(),
+    val storedEnergy: List<Float> = listOf(),
+    val totalChargeFromGrid: Float = 0f,
+    val totalDischarge: Float = 0f,
+    val totalChargeFromSolar: Float = 0f,
+
+) {
+    companion object {
+        fun fromStorageData(data: StorageData): BatteryHistory {
+            if (data.batteries.size != 1) {
+                throw NotImplementedError("History of multiple batteries not implemented")
+            }
+            val telemetry = data.batteries.first().telemetry
+            return BatteryHistory(
+                telemetry.timestamps,
+                telemetry.chargePowerFromGrid,
+                telemetry.chargeEnergyFromGrid,
+                telemetry.chargePowerFromSolar,
+                telemetry.dischargePower,
+                telemetry.chargePercentage,
+                telemetry.storedEnergy,
+                telemetry.totalChargeFromGrid,
+                telemetry.totalDischarge,
+                telemetry.totalChargeFromSolar
+            )
+        }
+    }
+}
 
 val Telemetry.totalChargeFromGrid: Float
     get() = chargeEnergyFromGrid.sum()

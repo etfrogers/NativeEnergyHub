@@ -30,6 +30,7 @@ object ViewModelFactory {
                 solarModel = SystemModel.solarEdgeModel,
                 heatPumpModel = SystemModel.ecoForestModel,
                 diverterModel = SystemModel.myEnergiModel,
+                timezone = SystemModel.timezone,
             ) as T
         }
     }

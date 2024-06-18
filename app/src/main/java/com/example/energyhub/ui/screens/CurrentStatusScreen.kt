@@ -29,11 +29,11 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,7 +73,6 @@ import com.example.energyhub.ui.PowerLabel
 import com.example.energyhub.ui.PullToRefreshBox
 import com.example.energyhub.ui.UnitLabel
 import com.example.energyhub.ui.theme.EnergyHubTheme
-import kotlinx.coroutines.launch
 
 @Composable
 fun ErrorLog(errors: List<ErrorType>,
@@ -111,12 +110,11 @@ fun ErrorRecord(
     }
 }
 @Composable
-private fun showError(snackbarHostState: SnackbarHostState,
+private fun ShowError(snackbarHostState: SnackbarHostState,
                       error: ErrorType,
                       onClick:()->Unit){
     val msg = "${error.type}\n${error.msg}"
-    val scope = rememberCoroutineScope()
-    scope.launch {
+    LaunchedEffect("Error Snackbar") {
         val result = snackbarHostState
             .showSnackbar(
                 message = msg,
@@ -163,7 +161,7 @@ fun CurrentStatusScreen(
                 ErrorLog(errorLog, {showErrorLog = false})
             } else {
                 statusUiState.errors.forEach {
-                    showError(snackbarHostState, it) { showErrorLog = true }
+                    ShowError(snackbarHostState, it) { showErrorLog = true }
                 }
                 errorLog.addAll(statusUiState.errors)
                 statusViewModel.clearErrors()

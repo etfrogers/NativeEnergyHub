@@ -1,5 +1,6 @@
 package com.example.energyhub.model
 
+import com.etfrogers.ecoforestklient.DayData
 import com.etfrogers.myenergiklient.Eddi
 import com.etfrogers.myenergiklient.MyEnergiClient
 import com.etfrogers.myenergiklient.MyEnergiSystem
@@ -9,17 +10,18 @@ import kotlinx.datetime.LocalDate
 class MyEnergiModel(username: String,
                     password: String,
                     invalidSerials: List<String> = listOf()
-): BaseModel<MyEnergiSystem>() {
+): BaseModel<MyEnergiSystem, DayData>() {
 
     private val client: MyEnergiClient = MyEnergiClient (username, password, invalidSerials)
     override suspend fun refreshUnsafe(): MyEnergiSystem {
         return client.getCurrentStatus()
     }
 
-    override suspend fun getHistoryForDateUnsafe(date: LocalDate): HistoryData {
+    override suspend fun getHistoryForDateUnsafe(date: LocalDate): DayData {
         TODO("Not yet implemented")
     }
 }
+
 
 val MyEnergiSystem.immersionPower: Float
     get() = powers["Eddi"]?.toFloat() ?: 0f

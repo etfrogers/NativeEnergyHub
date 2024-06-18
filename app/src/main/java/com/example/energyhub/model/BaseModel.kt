@@ -4,36 +4,36 @@ import android.util.Log
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
-abstract class BaseModel<StatusType>(
+abstract class BaseModel<StatusType, HistoryType>(
     var stale: Boolean = true,
     var refreshing: Boolean = true,
 ) {
-    suspend fun refresh(): Resource<StatusType> {
-        return try {
-            Resource.Success(refreshUnsafe())
-        } catch (e: Exception){
-            Log.d("Status Refresh Error", "${e::class.simpleName}: ${e.message}", e)
-            Resource.Error(e.toErrorType())
+
+    protected companion object {
+        suspend fun <T> wrapAsResource(tag: String, fetcher: suspend () -> T): Resource<T>{
+            return try {
+                Resource.Success(fetcher())
+            } catch (e: Exception){
+                Log.d(tag, "${e::class.simpleName}: ${e.message}", e)
+                Resource.Error(e.toErrorType())
+            }
         }
     }
 
-    suspend fun getHistoryForDate(date: LocalDate): Resource<HistoryData> {
-        return try {
-            Resource.Success(getHistoryForDateUnsafe(date))
-        } catch (e: Exception){
-            Log.d("History Refresh Error", "${e::class.simpleName}: ${e.message}", e)
-            Resource.Error(e.toErrorType())
+    suspend fun refresh(): Resource<StatusType> {
+        return wrapAsResource("Status Refresh Error") { refreshUnsafe() }
+    }
+
+    suspend fun getHistoryForDate(date: LocalDate): Resource<HistoryType> {
+        return wrapAsResource("History Refresh Error") {
+            getHistoryForDateUnsafe(date)
         }
     }
 
     protected abstract suspend fun refreshUnsafe(): StatusType
 
-    protected abstract suspend fun getHistoryForDateUnsafe(date: LocalDate): HistoryData
+    protected abstract suspend fun getHistoryForDateUnsafe(date: LocalDate): HistoryType
 }
-
-abstract class HistoryData(
-    val timestamps: List<LocalDateTime>
-)
 
 fun Exception.toErrorType() = ErrorType.Unknown(this)
 // when (this.code) {

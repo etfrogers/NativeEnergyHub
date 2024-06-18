@@ -1,5 +1,7 @@
 package com.example.energyhub.model
 
+import kotlinx.datetime.TimeZone
+
 enum class EcoState {
     ECO, MIXED, GRID
 }
@@ -8,6 +10,7 @@ object SystemModel {
     lateinit var solarEdgeModel: SolarEdgeModel
     lateinit var ecoForestModel: EcoForestModel
     lateinit var myEnergiModel: MyEnergiModel
+    lateinit var timezone: TimeZone
 
     fun build(config: ConfigData) {
         solarEdgeModel = SolarEdgeModel(config.solarEdgeConfig.siteID, config.solarEdgeConfig.siteApiKey)
@@ -15,6 +18,7 @@ object SystemModel {
         ecoForestModel = EcoForestModel(ecoForest.server, ecoForest.port, ecoForest.serialNumber, ecoForest.authKey)
         val myEnergi = config.myEnergiConfig
         myEnergiModel = MyEnergiModel(myEnergi.username, myEnergi.apiKey, myEnergi.oldSerialNumbers)
+        timezone = Config.location.timezone
     }
 
     suspend fun refresh(){

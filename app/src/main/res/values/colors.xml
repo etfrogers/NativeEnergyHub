@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="mixed">#CCCC00</color>
+    <color name="consumption">#D60000</color>
+    <color name="battery">#00BF00</color>
+    <color name="solar">#00E600</color>
+    <color name="export">#950D4F</color>
+    <color name="importColor">#808080</color>
+    <color name="car">#4275E8</color>
+    <color name="immersion">#42D6E8</color>
+    <color name="DHW">#FF8000</color>
+    <color name="heating">#FFBF40</color>
+    <color name="legionnaires">#FF8000</color>
+    <color name="combined">#FF8000</color>
+    <color name="heatPumpUnknown">#FF8000</color>
 </resources>
