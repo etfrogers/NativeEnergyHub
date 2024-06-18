@@ -206,6 +206,13 @@ class HistoryViewModel(
             solarModel.getBatteryHistoryForDate(date)
         }
     }
+
+    fun clearErrors(){
+        _uiState.update { currentState ->
+            currentState.errors = listOf()
+            currentState
+        }
+    }
 }
 
 enum class NormalisationMode {
@@ -275,7 +282,7 @@ data class HistoryUiState(
 
     val batteryPercentage: List<Float> = listOf(),
 
-    val errors: List<ErrorType> = listOf(),
+    var errors: List<ErrorType> = listOf(),
 
     val timezone: TimeZone,
 //    val solarResource: Resource<SolarHistory> = Resource.Success(SolarHistory()),

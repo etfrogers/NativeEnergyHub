@@ -4,11 +4,17 @@ import android.graphics.Typeface
 import android.text.Layout
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -65,9 +71,24 @@ fun HistoryScreen (
     historyViewModel: HistoryViewModel = viewModel(factory = ViewModelFactory.HistoryFactory)
 ) {
     val uiState by historyViewModel.uiState.collectAsState()
-    Column(modifier = modifier) {
-        CenterText(text = "Total Generation ${uiState.totalSelfConsumptionEnergy}")
-        ChartLayout(uiState)
+    var showErrorLog by remember { mutableStateOf(false) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        },
+    ) { contentPadding ->
+        ErrorHost(
+            showErrorLog,
+            uiState.errors,
+            onCloseLog = { showErrorLog = false },
+            onShowMore = { showErrorLog = true },
+            afterShow = { historyViewModel.clearErrors() },
+            snackbarHostState = snackbarHostState,
+        ) {
+            ChartLayout(uiState, modifier=modifier.padding(contentPadding))
+        }
     }
 }
 
