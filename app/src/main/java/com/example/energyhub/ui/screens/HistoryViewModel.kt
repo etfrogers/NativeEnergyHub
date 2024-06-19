@@ -12,6 +12,7 @@ import com.example.energyhub.model.Config
 import com.example.energyhub.model.EcoForestModel
 import com.example.energyhub.model.ErrorType
 import com.example.energyhub.model.HeatPumpDay
+import com.example.energyhub.model.MyEnergiHistory
 import com.example.energyhub.model.MyEnergiModel
 import com.example.energyhub.model.Resource
 import com.example.energyhub.model.SolarEdgeModel
@@ -55,17 +56,18 @@ class HistoryViewModel(
         var solarResource: Resource<SolarHistory>
         var heatPumpResource: Resource<HeatPumpDay>
         var batteryResource: Resource<BatteryHistory>
+        var diverterResource: Resource<MyEnergiHistory>
         viewModelScope.launch(context = Dispatchers.IO) {
             val solarDeferred = getSolarHistory(date)
             val hpDeferred = getHeatPumpHistory(date)
             val batteryDeferred = getBatteryHistory(date)
+            val diverterDeferred = getDiverterHistory(date)
 
-//                val j3 = refreshDiverter()
             solarResource = solarDeferred.await()
             heatPumpResource = hpDeferred.await()
             batteryResource = batteryDeferred.await()
-//                j3.join()
-            buildStatus(solarResource, heatPumpResource, batteryResource)
+            diverterResource = diverterDeferred.await()
+            buildStatus(solarResource, heatPumpResource, batteryResource, diverterResource)
         }
     }
 
@@ -73,13 +75,14 @@ class HistoryViewModel(
     private fun buildStatus(
         solarResource: Resource<SolarHistory>,
         heatPumpResource: Resource<HeatPumpDay>,
-        batteryResource: Resource<BatteryHistory>
+        batteryResource: Resource<BatteryHistory>,
+        diverterResource: Resource<MyEnergiHistory>,
     ) {
         val errors = listOf(
             solarResource,
             heatPumpResource,
             batteryResource,
-//                diverterResource
+            diverterResource
         ).mapNotNull {
             if (it is Resource.Error) it.error else null
         }
@@ -92,20 +95,20 @@ class HistoryViewModel(
             return
         }
         val solar = (solarResource as Resource.Success<SolarHistory>).data
-        val heatPump = (heatPumpResource as Resource.Success<HeatPumpDay>).data
+        val heatPump = (heatPumpResource as? Resource.Success<HeatPumpDay>)?.data ?: HeatPumpDay()
         val battery = (batteryResource as? Resource.Success<BatteryHistory>)?.data ?: BatteryHistory()
+        val diverter = (diverterResource as? Resource.Success<MyEnergiHistory>)?.data ?: MyEnergiHistory()
         val generationPower = solar.generation
         val consumptionPower = solar.consumption
         val exportPower = solar.export
         val importPower = solar.import
 
         val refTimestamps = solar.timestamps
-        /*
-        val car_charge_power = normaliseToTimestamps(ref_timestamps, zappi_timestamps,
-                                                   zappi_powers['total_power'])
-        immersion_power = normaliseToTimestamps(ref_timestamps, eddi_timestamps,
-                                                  eddi_powers['total_power'])
-                                                  */
+
+        val carChargePower = normaliseToTimestamps(
+            refTimestamps, diverter.zappi.timestamps, diverter.zappi.totalPower)
+        val immersionPower = normaliseToTimestamps(
+            refTimestamps, diverter.eddi.timestamps, diverter.eddi.totalPower)
         val dhwPower = normaliseToTimestamps(refTimestamps, heatPump.timestamps, heatPump.dhwPower)
         val heatingPower = normaliseToTimestamps(
             refTimestamps, heatPump.timestamps,
@@ -143,7 +146,7 @@ class HistoryViewModel(
             (value, ts) ->  if (ts <= battery.timestamps.last()) value else null}
 
 
-        val otherConsumption = consumptionPower - (/*car_charge_power + immersion_power + */
+        val otherConsumption = consumptionPower - (carChargePower + immersionPower +
                 dhwPower + heatingPower
                 + legionnairesPower + combinedPower + unknownHeatPumpPower
                 + batteryGridCharging)
@@ -170,8 +173,8 @@ class HistoryViewModel(
                                + heatPump.legionnairesEnergy
                                + heatPump.combinedEnergy
                                + heatPump.unknownEnergy
-//                               + zappi_powers['total_energy
-//                               + eddi_powers['total_energy
+                               + diverter.zappi.totalEnergy
+                               + diverter.eddi.totalEnergy
                                )
                             )
 
@@ -204,6 +207,12 @@ class HistoryViewModel(
     private fun getBatteryHistory(date: LocalDate): Deferred<Resource<BatteryHistory>> {
         return viewModelScope.async(context = Dispatchers.IO) {
             solarModel.getBatteryHistoryForDate(date)
+        }
+    }
+
+    private fun getDiverterHistory(date: LocalDate): Deferred<Resource<MyEnergiHistory>> {
+        return viewModelScope.async(context = Dispatchers.IO) {
+            diverterModel.getHistoryForDate(date)
         }
     }
 
