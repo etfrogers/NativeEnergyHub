@@ -76,12 +76,21 @@ dependencies {
     implementation(libs.vico.compose.m3)
     implementation(libs.vico.core)
 
-
+    testImplementation(kotlin("test"))
     testImplementation(libs.junit)
+    testImplementation(libs.jupiter)
+    testImplementation(libs.jupiter.params)
+    testImplementation(libs.jupiter.api)
+    testRuntimeOnly(libs.jupiter.engine)
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
