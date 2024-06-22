@@ -2,7 +2,6 @@ package com.example.energyhub.model
 
 import android.util.Log
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
 
 abstract class BaseModel<StatusType, HistoryType>(
     var stale: Boolean = true,

@@ -14,6 +14,7 @@ import com.example.energyhub.model.ErrorType
 import com.example.energyhub.model.HeatPumpDay
 import com.example.energyhub.model.MyEnergiHistory
 import com.example.energyhub.model.MyEnergiModel
+import com.example.energyhub.model.OffsetDateTime
 import com.example.energyhub.model.Resource
 import com.example.energyhub.model.SolarEdgeModel
 import com.example.energyhub.model.SolarHistory
@@ -32,7 +33,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 
@@ -231,14 +231,13 @@ enum class NormalisationMode {
 }
 
 private fun normaliseToTimestamps(
-    refTimestamps: List<LocalDateTime>,
-    dataTimestamps: List<LocalDateTime>,
+    refTimestamps: List<OffsetDateTime>,
+    dataTimestamps: List<OffsetDateTime>,
     data: List<Float>,
     mode: NormalisationMode = NormalisationMode.PRECEDING,
-    timezone: TimeZone = Config.location.timezone,
     ): List<Float> {
-    val refHours = refTimestamps.toHours(timezone)
-    val dataHours = dataTimestamps.toHours(timezone)
+    val refHours = refTimestamps.toHours()
+    val dataHours = dataTimestamps.toHours()
     val binEdges = when (mode) {
         NormalisationMode.MIDPOINT -> refHours.drop(1).zip(refHours.dropLast(1)).map { (z, e) -> (z+e)/2 }
         NormalisationMode.PRECEDING -> refHours.drop(1)
@@ -283,7 +282,7 @@ private fun bincount(binIndices: List<Int>, weights: List<Float>,  minLength: In
 fun EmptyBattery() = Battery("", 0f, "", 0, Telemetry())
 
 data class HistoryUiState(
-    val timestamps: List<LocalDateTime> = listOf(),
+    val timestamps: List<OffsetDateTime> = listOf(),
     val totalSelfConsumptionEnergy: Float = 0f,
     val netBatteryChargeFromSolar: Float = 0f,
     val netBatteryChargeFromGrid: Float = 0f,
@@ -297,7 +296,7 @@ data class HistoryUiState(
 //    val solarResource: Resource<SolarHistory> = Resource.Success(SolarHistory()),
 //    val batteryResource: Resource<Battery> = Resource.Success(EmptyBattery())
 ){
-    val fractionalHours: List<Float> by lazy { timestamps.toHours(timezone) }
+    val fractionalHours: List<Float> by lazy { timestamps.toHours() }
 
 //    val solar: SolarHistory = dataOrEmpty(solarResource, ::SolarHistory)
 //    val battery: Battery = dataOrEmpty(batteryResource, ::EmptyBattery)

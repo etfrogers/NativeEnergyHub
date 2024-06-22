@@ -7,11 +7,13 @@ import com.etfrogers.myenergiklient.MyEnergiClient
 import com.etfrogers.myenergiklient.MyEnergiSystem
 import com.etfrogers.myenergiklient.Zappi
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
 
-class MyEnergiModel(username: String,
-                    password: String,
-                    invalidSerials: List<String> = listOf()
+class MyEnergiModel(
+    username: String,
+    password: String,
+    invalidSerials: List<String> = listOf(),
+    val timezone: TimeZone,
 ): BaseModel<MyEnergiSystem, MyEnergiHistory>() {
 
     private lateinit var zappiSerial: String
@@ -32,8 +34,8 @@ class MyEnergiModel(username: String,
         val eddiData = client.getMinuteData(zappiSerial, date)
         val eddiHourData = client.getHourData(zappiSerial, date)
         return MyEnergiHistory(
-            zappi = MyEnergiDeviceHistory.fromMinuteHourData(zappiData, zappiHourData),
-            eddi = MyEnergiDeviceHistory.fromMinuteHourData(eddiData, eddiHourData)
+            zappi = MyEnergiDeviceHistory.fromMinuteHourData(zappiData, zappiHourData, timezone),
+            eddi = MyEnergiDeviceHistory.fromMinuteHourData(eddiData, eddiHourData, timezone)
         )
     }
 }
@@ -93,7 +95,7 @@ data class MyEnergiHistory(
 )
 
 data class MyEnergiDeviceHistory(
-    val timestamps: List<LocalDateTime> = listOf(),
+    val timestamps: List<OffsetDateTime> = listOf(),
     val voltage: List<Float> = listOf(),
     val frequency: List<Float> = listOf(),
     val importPower: List<Float> = listOf(),
@@ -108,10 +110,10 @@ data class MyEnergiDeviceHistory(
     val totalEnergy: Float = 0f,
 ){
     companion object {
-        fun fromMinuteHourData(data: DetailHistory, hourData: HourData): MyEnergiDeviceHistory {
+        fun fromMinuteHourData(data: DetailHistory, hourData: HourData, timezone: TimeZone): MyEnergiDeviceHistory {
             val energyData = hourData.toEnergies(data.meanVoltagePerHour())
             return MyEnergiDeviceHistory(
-                timestamps = data.timestamps,
+                timestamps = data.timestamps.toOffsetDateTime(timezone),
                 voltage = data.voltage,
                 frequency = data.frequency,
                 importPower = data.importPower,

@@ -13,12 +13,27 @@ object SystemModel {
     lateinit var timezone: TimeZone
 
     fun build(config: ConfigData) {
-        solarEdgeModel = SolarEdgeModel(config.solarEdgeConfig.siteID, config.solarEdgeConfig.siteApiKey)
-        val ecoForest = config.ecoForestConfig
-        ecoForestModel = EcoForestModel(ecoForest.server, ecoForest.port, ecoForest.serialNumber, ecoForest.authKey)
-        val myEnergi = config.myEnergiConfig
-        myEnergiModel = MyEnergiModel(myEnergi.username, myEnergi.apiKey, myEnergi.oldSerialNumbers)
         timezone = Config.location.timezone
+        solarEdgeModel = SolarEdgeModel(
+            config.solarEdgeConfig.siteID,
+            config.solarEdgeConfig.siteApiKey,
+            timezone
+        )
+        val ecoForest = config.ecoForestConfig
+        ecoForestModel = EcoForestModel(
+            ecoForest.server,
+            ecoForest.port,
+            ecoForest.serialNumber,
+            ecoForest.authKey,
+            timezone
+        )
+        val myEnergi = config.myEnergiConfig
+        myEnergiModel = MyEnergiModel(
+            myEnergi.username,
+            myEnergi.apiKey,
+            myEnergi.oldSerialNumbers,
+            timezone
+        )
     }
 
     suspend fun refresh(){

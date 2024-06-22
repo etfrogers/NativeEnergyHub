@@ -3,9 +3,8 @@ package com.example.energyhub.model
 import com.etfrogers.ksolaredge.SolarEdgeApi
 import com.etfrogers.ksolaredge.serialisers.Connection
 import com.etfrogers.ksolaredge.serialisers.StorageData
-import com.etfrogers.ksolaredge.serialisers.Telemetry
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
 
 enum class BatteryChargeState {
     HIGH, MEDIUM, LOW
@@ -49,7 +48,8 @@ class SolarStatus (
 
 class SolarEdgeModel(
     siteID: String,
-    apiKey: String
+    apiKey: String,
+    val timezone: TimeZone,
 ) : BaseModel<SolarStatus, SolarHistory>() {
     private val client = SolarEdgeApi(siteID, apiKey)
 
@@ -73,7 +73,7 @@ class SolarEdgeModel(
 
     suspend fun getBatteryHistoryForDate(date: LocalDate): Resource<BatteryHistory> {
         return wrapAsResource("Battery History") {
-            BatteryHistory.fromStorageData(client.getBatteryHistoryForDay(date))
+            BatteryHistory.fromStorageData(client.getBatteryHistoryForDay(date), timezone)
         }
     }
 
@@ -95,7 +95,7 @@ class SolarEdgeModel(
         val powerMeters = powerData.meters
         val n = powerMeters.timestamps.size
         return SolarHistory(
-            timestamps = powerMeters.timestamps,
+            timestamps = powerMeters.timestamps.toOffsetDateTime(timezone),
             import = nullToZero(powerMeters.purchased, n),
             consumption = nullToZero(powerMeters.consumption, n),
             generation = nullToZero(powerMeters.production, n),
@@ -113,7 +113,7 @@ fun nullToZero(list: List<Float?>?, length: Int): List<Float>{
 }
 
 data class SolarHistory(
-    val timestamps: List<LocalDateTime> = listOf(),
+    val timestamps: List<OffsetDateTime> = listOf(),
     val export: List<Float> = listOf(),
     val consumption: List<Float> = listOf(),
     val generation: List<Float> = listOf(),
@@ -125,46 +125,43 @@ data class SolarHistory(
 )
 
 data class BatteryHistory(
-    val timestamps: List<LocalDateTime> = listOf(),
+    val timestamps: List<OffsetDateTime> = listOf(),
     val chargePowerFromGrid: List<Float> = listOf(),
     val chargeEnergyFromGrid: List<Float> = listOf(),
     val chargePowerFromSolar: List<Float> = listOf(),
     val dischargePower: List<Float> = listOf(),
     val chargePercentage: List<Float> = listOf(),
     val storedEnergy: List<Float> = listOf(),
-    val totalChargeFromGrid: Float = 0f,
-    val totalDischarge: Float = 0f,
-    val totalChargeFromSolar: Float = 0f,
-
 ) {
     companion object {
-        fun fromStorageData(data: StorageData): BatteryHistory {
+        fun fromStorageData(data: StorageData, timezone: TimeZone): BatteryHistory {
             if (data.batteries.size != 1) {
                 throw NotImplementedError("History of multiple batteries not implemented")
             }
             val telemetry = data.batteries.first().telemetry
             return BatteryHistory(
-                telemetry.timestamps,
+                telemetry.timestamps.toOffsetDateTime(timezone),
                 telemetry.chargePowerFromGrid,
                 telemetry.chargeEnergyFromGrid,
                 telemetry.chargePowerFromSolar,
                 telemetry.dischargePower,
                 telemetry.chargePercentage,
                 telemetry.storedEnergy,
-                telemetry.totalChargeFromGrid,
-                telemetry.totalDischarge,
-                telemetry.totalChargeFromSolar
             )
         }
     }
+
+    val totalChargeFromGrid: Float
+        get() = chargeEnergyFromGrid.sum()
+
+    val totalDischarge: Float
+        get() = integratePowers(dischargePower, timestamps)
+
+    val totalChargeFromSolar: Float
+        get() = integratePowers(chargePowerFromSolar, timestamps)
+
 }
 
-val Telemetry.totalChargeFromGrid: Float
-    get() = chargeEnergyFromGrid.sum()
-val Telemetry.totalDischarge: Float
-    get() = integratePowers(dischargePower, timestamps)
-val Telemetry.totalChargeFromSolar: Float
-    get() = integratePowers(chargePowerFromSolar, timestamps)
 
 /*
 from datetime import datetime

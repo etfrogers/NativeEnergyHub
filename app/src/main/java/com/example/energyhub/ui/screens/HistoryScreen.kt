@@ -23,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.energyhub.R
+import com.example.energyhub.model.OffsetDateTime
 import com.example.energyhub.model.toFractionalHours
 import com.example.energyhub.ui.theme.EnergyHubTheme
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -308,7 +309,10 @@ fun PreviewHistory() {
     EnergyHubTheme(darkTheme = false) {
         ChartLayout(HistoryUiState(
             timestamps = (0..23).map {
-                    LocalDateTime(2024, 6, 1, it, 0, 0) },
+                    OffsetDateTime(
+                        LocalDateTime(2024, 6, 1, it, 0, 0),
+                        TimeZone.UTC)
+                                     },
             batteryPercentage = (0..23).map { it*100f/23f },
             timezone = TimeZone.UTC,//TimeZone.of("Europe/London"),
         )

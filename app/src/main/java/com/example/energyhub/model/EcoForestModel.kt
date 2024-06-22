@@ -5,13 +5,14 @@ import com.etfrogers.ecoforestklient.DayData
 import com.etfrogers.ecoforestklient.EcoForestClient
 import com.etfrogers.ecoforestklient.EcoforestStatus
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
 
 class EcoForestModel(
     server: String,
     port: String,
     serialNumber: String,
     authKey: String,
+    val timezone: TimeZone,
     ): BaseModel<EcoforestStatus, HeatPumpDay>() {
     private val client: EcoForestClient =
         EcoForestClient(server = server, port = port, authKey = authKey, serialNumber = serialNumber,
@@ -23,12 +24,12 @@ class EcoForestModel(
     }
 
     override suspend fun getHistoryForDateUnsafe(date: LocalDate): HeatPumpDay {
-        return HeatPumpDay.fromDayData(client.getHistoryForDate(date))
+        return HeatPumpDay.fromDayData(client.getHistoryForDate(date), timezone)
     }
 }
 
 data class HeatPumpDay(
-    val timestamps: List<LocalDateTime> = listOf(),
+    val timestamps: List<OffsetDateTime> = listOf(),
     val outdoorTemp: List<Float> = listOf(),
     val heatingPower: List<Float> = listOf(),
     val dhwPower: List<Float> = listOf(),
@@ -42,9 +43,9 @@ data class HeatPumpDay(
     val unknownEnergy: Float = 0f,
 ){
     companion object {
-        fun fromDayData(data: DayData): HeatPumpDay {
+        fun fromDayData(data: DayData, timezone: TimeZone): HeatPumpDay {
             return HeatPumpDay(
-                timestamps = data.timestamps,
+                timestamps = data.timestamps.toOffsetDateTime(timezone),
                 outdoorTemp = data.outdoorTemp,
                 heatingPower = data.getPowerSeries(ChunkClass.heatingTypes()) * 1000,
                 dhwPower = data.getPowerSeries(ChunkClass.dhwTypes()) * 1000,
