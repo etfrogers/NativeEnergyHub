@@ -36,6 +36,8 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 
+const val DISPLAY_SCALE_FACTOR = 1000
+
 class HistoryViewModel(
     private val solarModel: SolarEdgeModel,
     private val heatPumpModel: EcoForestModel,
@@ -154,8 +156,9 @@ class HistoryViewModel(
         val solarProduction = generationPower + batterySolarCharging - batteryDischarging
         val solarConsumption = solarProduction - (exportPower + batterySolarCharging)
 
+        val netBatteryChargeFromGrid = battery.storedEnergy.last() - battery.storedEnergy.first()
         var totalConsumption = if (battery.totalChargeFromGrid > 0f) {
-            solar.totalConsumption + (battery.storedEnergy.last() - battery.storedEnergy.first())
+            solar.totalConsumption + netBatteryChargeFromGrid
         }
         else {
             solar.totalConsumption
@@ -181,11 +184,18 @@ class HistoryViewModel(
         _uiState.update { currentState ->
             currentState.copy(
                 timestamps = refTimestamps,
-                totalSelfConsumptionEnergy = solarConsumptionEnergy,
-                netBatteryChargeFromSolar = batterySolarChargingEnergy,
-                netBatteryChargeFromGrid = battery.totalChargeFromGrid, // TODO probably wrong!!
-                totalExport = solar.totalExport,
+                totalSelfConsumptionEnergy = solarConsumptionEnergy / DISPLAY_SCALE_FACTOR,
+                netBatteryChargeFromSolar = batterySolarChargingEnergy / DISPLAY_SCALE_FACTOR,
+                netBatteryChargeFromGrid = netBatteryChargeFromGrid / DISPLAY_SCALE_FACTOR,
+                totalExport = solar.totalExport / DISPLAY_SCALE_FACTOR,
                 batteryPercentage = batteryState,
+                totalBatteryDischargeEnergy = batteryDischargeEnergy / DISPLAY_SCALE_FACTOR,
+                totalImport = solar.totalImport / DISPLAY_SCALE_FACTOR,
+                dhwEnergy = heatPump.dhwEnergy / DISPLAY_SCALE_FACTOR,
+                heatingEnergy = heatPump.heatingEnergy / DISPLAY_SCALE_FACTOR,
+                legionnairesEnergy = heatPump.legionnairesEnergy / DISPLAY_SCALE_FACTOR,
+                combinedHPEnergy = heatPump.combinedEnergy / DISPLAY_SCALE_FACTOR,
+                remainingEnergy = remainingEnergy / DISPLAY_SCALE_FACTOR,
                 timezone = timezone,
             )
         }
@@ -285,8 +295,20 @@ data class HistoryUiState(
     val timestamps: List<OffsetDateTime> = listOf(),
     val totalSelfConsumptionEnergy: Float = 0f,
     val netBatteryChargeFromSolar: Float = 0f,
+    val totalBatteryDischargeEnergy: Float = 0f,
     val netBatteryChargeFromGrid: Float = 0f,
     val totalExport: Float = 0f,
+    val totalImport: Float = 0f,
+
+    val zappiEnergy: Float = 0f,
+    val eddiEnergy: Float = 0f,
+
+    val dhwEnergy: Float = 0f,
+    val heatingEnergy: Float = 0f,
+    val legionnairesEnergy: Float = 0f,
+    val combinedHPEnergy: Float = 0f,
+    val remainingEnergy: Float = 0f,
+
 
     val batteryPercentage: List<Float> = listOf(),
 

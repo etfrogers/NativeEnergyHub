@@ -2,6 +2,7 @@ package com.example.energyhub.ui.screens
 
 import android.graphics.Typeface
 import android.text.Layout
+import androidx.annotation.ColorRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -44,13 +45,19 @@ import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.of
 import com.patrykandpatrick.vico.compose.common.shader.color
 import com.patrykandpatrick.vico.compose.common.shape.markerCornered
+import com.patrykandpatrick.vico.core.cartesian.CartesianDrawContext
 import com.patrykandpatrick.vico.core.cartesian.CartesianMeasureContext
 import com.patrykandpatrick.vico.core.cartesian.HorizontalDimensions
+import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
 import com.patrykandpatrick.vico.core.cartesian.Insets
 import com.patrykandpatrick.vico.core.cartesian.Zoom
+import com.patrykandpatrick.vico.core.cartesian.axis.AxisItemPlacer
 import com.patrykandpatrick.vico.core.cartesian.axis.AxisPosition
 import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.core.cartesian.data.ChartValues
+import com.patrykandpatrick.vico.core.cartesian.data.ColumnCartesianLayerModel
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
@@ -64,6 +71,9 @@ import com.patrykandpatrick.vico.core.common.shape.Shape
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.round
 
 
 @Composable
@@ -134,7 +144,13 @@ internal fun BatteryChart(uiState: HistoryUiState, modifier: Modifier = Modifier
                     minX = 0f, maxX = 24f, minY = 0f, maxY = 100f)
             ),
             startAxis = rememberStartAxis(),
-            bottomAxis = rememberBottomAxis(guideline = null),
+            bottomAxis = rememberBottomAxis(
+                guideline = null,
+                itemPlacer = HorizontalAxisItemPlacer(
+                    spacing = 12,
+                    shiftExtremeTicks = true
+                )
+            ),
             persistentMarkers = mapOf(
                 Clock.System.now().toFractionalHours(uiState.timezone)
                         to marker),
@@ -147,7 +163,152 @@ internal fun BatteryChart(uiState: HistoryUiState, modifier: Modifier = Modifier
     )
 }
 
-private val x = (1..50).toList()
+internal class HorizontalAxisItemPlacer(
+    private val spacing: Int,
+    private val offset: Int = 0,
+    private val shiftExtremeTicks: Boolean,
+    private val addExtremeLabelPadding: Boolean = false,
+) : AxisItemPlacer.Horizontal {
+    private val CartesianMeasureContext.addExtremeLabelPadding
+        get() =
+            this@HorizontalAxisItemPlacer.addExtremeLabelPadding &&
+                    horizontalLayout is HorizontalLayout.FullWidth
+
+    private val ChartValues.measuredLabelValues
+        get() = buildList {
+            add(minX)
+            if (xLength < xStep) return@buildList
+            add(minX + xStep * floor(xLength / xStep))
+            if (xLength >= 2 * xStep) add(minX + xStep * round((xLength/2) / xStep))
+        }
+
+    override fun getShiftExtremeTicks(context: CartesianDrawContext): Boolean = shiftExtremeTicks
+
+    override fun getFirstLabelValue(context: CartesianMeasureContext, maxLabelWidth: Float) =
+        if (context.addExtremeLabelPadding)
+            context.chartValues.minX + offset * context.chartValues.xStep
+        else null
+
+    override fun getLastLabelValue(context: CartesianMeasureContext, maxLabelWidth: Float) =
+        if (context.addExtremeLabelPadding) {
+            with(context.chartValues) { maxX - (xLength - xStep * offset) % (xStep * spacing) }
+        } else {
+            null
+        }
+
+    override fun getLabelValues(
+        context: CartesianDrawContext,
+        visibleXRange: ClosedFloatingPointRange<Float>,
+        fullXRange: ClosedFloatingPointRange<Float>,
+        maxLabelWidth: Float,
+    ): List<Float> {
+        with(context) {
+            val dynamicSpacing =
+                spacing *
+                        if (this.addExtremeLabelPadding) {
+                            ceil(maxLabelWidth / (horizontalDimensions.xSpacing * spacing)).toInt()
+                        } else {
+                            1
+                        }
+            val remainder =
+                ((visibleXRange.start - chartValues.minX) / chartValues.xStep - offset) % dynamicSpacing
+            val firstValue =
+                visibleXRange.start + (dynamicSpacing - remainder) % dynamicSpacing * chartValues.xStep
+            val minXOffset = chartValues.minX % chartValues.xStep
+            val values = mutableListOf<Float>()
+            var multiplier = -LABEL_OVERFLOW_SIZE
+            var hasEndOverflow = false
+            while (true) {
+                var potentialValue = firstValue + multiplier++ * dynamicSpacing * chartValues.xStep
+                potentialValue =
+                    chartValues.xStep * round((potentialValue - minXOffset) / chartValues.xStep) + minXOffset
+                if (potentialValue < chartValues.minX || potentialValue == fullXRange.start) continue
+                if (potentialValue > chartValues.maxX || potentialValue == fullXRange.endInclusive) break
+                values += potentialValue
+                if (
+                    potentialValue > visibleXRange.endInclusive &&
+                    hasEndOverflow.also { hasEndOverflow = true }
+                )
+                    break
+            }
+            return values
+        }
+    }
+
+    override fun getWidthMeasurementLabelValues(
+        context: CartesianMeasureContext,
+        horizontalDimensions: HorizontalDimensions,
+        fullXRange: ClosedFloatingPointRange<Float>,
+    ) = if (context.addExtremeLabelPadding) context.chartValues.measuredLabelValues else emptyList()
+
+    override fun getHeightMeasurementLabelValues(
+        context: CartesianMeasureContext,
+        horizontalDimensions: HorizontalDimensions,
+        fullXRange: ClosedFloatingPointRange<Float>,
+        maxLabelWidth: Float,
+    ) = context.chartValues.measuredLabelValues
+
+    override fun getLineValues(
+        context: CartesianDrawContext,
+        visibleXRange: ClosedFloatingPointRange<Float>,
+        fullXRange: ClosedFloatingPointRange<Float>,
+        maxLabelWidth: Float,
+    ): List<Float>? {
+        return getLabelValues(context,visibleXRange, fullXRange, maxLabelWidth)}
+//        with(context) {
+//            when (horizontalLayout) {
+//                is HorizontalLayout.Segmented -> {
+//                    val remainder = (visibleXRange.start - fullXRange.start) % chartValues.xStep
+//                    val firstValue = visibleXRange.start + (chartValues.xStep - remainder) % chartValues.xStep
+//                    var multiplier = -TICK_OVERFLOW_SIZE
+//                    val values = mutableListOf<Float>()
+//                    while (true) {
+//                        val potentialValue = firstValue + multiplier++ * chartValues.xStep
+//                        if (potentialValue < fullXRange.start) continue
+//                        if (potentialValue > fullXRange.endInclusive) break
+//                        values += potentialValue
+//                        if (potentialValue > visibleXRange.endInclusive) break
+//                    }
+//                    values
+//                }
+//                is HorizontalLayout.FullWidth -> null
+//            }
+//        }
+
+    override fun getStartHorizontalAxisInset(
+        context: CartesianMeasureContext,
+        horizontalDimensions: HorizontalDimensions,
+        tickThickness: Float,
+        maxLabelWidth: Float,
+    ): Float {
+        val tickSpace = if (shiftExtremeTicks) tickThickness else (tickThickness/2)
+        return when (context.horizontalLayout) {
+            is HorizontalLayout.Segmented -> tickSpace
+            is HorizontalLayout.FullWidth ->
+                (tickSpace - horizontalDimensions.unscalableStartPadding).coerceAtLeast(0f)
+        }
+    }
+
+    override fun getEndHorizontalAxisInset(
+        context: CartesianMeasureContext,
+        horizontalDimensions: HorizontalDimensions,
+        tickThickness: Float,
+        maxLabelWidth: Float,
+    ): Float {
+        val tickSpace = if (shiftExtremeTicks) tickThickness else (tickThickness/2)
+        return when (context.horizontalLayout) {
+            is HorizontalLayout.Segmented -> tickSpace
+            is HorizontalLayout.FullWidth ->
+                (tickSpace - horizontalDimensions.unscalableEndPadding).coerceAtLeast(0f)
+        }
+    }
+
+    private companion object {
+        const val LABEL_OVERFLOW_SIZE = 2
+        const val TICK_OVERFLOW_SIZE = 1
+    }
+}
+
 
 @Composable
 internal fun rememberMarker(
@@ -234,11 +395,6 @@ internal fun TotalsChart(
     uiState: HistoryUiState,
     modifier: Modifier = Modifier
 ) {
-    val columnChartColors = listOf(
-        R.color.consumption,
-        R.color.battery,
-        R.color.export).map { colorResource(it) }
-
     val modelProducer = remember { CartesianChartModelProducer.build() }
 //    LaunchedEffect("TotalsChartUpdate") {
 //        withContext(Dispatchers.Default) {
@@ -247,21 +403,34 @@ internal fun TotalsChart(
                     /* Learn more:
                     https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/column-layer#data. */
                     columnSeries {
-                        series(uiState.totalSelfConsumptionEnergy)
-                        series(uiState.netBatteryChargeFromSolar)
-                        series(uiState.totalExport)
-//                        repeat(Defaults.MULTI_SERIES_COUNT) {
-//                            series(
-//                                List(Defaults.ENTRY_COUNT) {
-//                                    Defaults.COLUMN_LAYER_MIN_Y +
-//                                            Random.nextFloat() * Defaults.COLUMN_LAYER_RELATIVE_MAX_Y
-//                                }
-//                            )
-//                        }
-//                    }
+                        singleSeries(
+                            0,
+                            uiState.totalSelfConsumptionEnergy,
+                            uiState.netBatteryChargeFromSolar,
+                            uiState.totalExport)
+                    }
+                    columnSeries {
+                        singleSeries(
+                            1,
+                        uiState.totalSelfConsumptionEnergy,
+                        uiState.totalBatteryDischargeEnergy,
+                        uiState.totalImport)
+
                     /* Learn more:
                     https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/line-layer#data. */
-//                    lineSeries { series(List(Defaults.ENTRY_COUNT) { Random.nextFloat() * Defaults.MAX_Y }) }
+                }
+                columnSeries {
+                    singleSeries(
+                        2,
+                        uiState.zappiEnergy,
+                        uiState.eddiEnergy,
+                        uiState.dhwEnergy,
+                        uiState.heatingEnergy,
+                        uiState.legionnairesEnergy,
+                        uiState.combinedHPEnergy,
+                        uiState.netBatteryChargeFromGrid,
+                        uiState.remainingEnergy,
+                    )
                 }
 //                delay(Defaults.TRANSACTION_INTERVAL_MS)
             }
@@ -271,20 +440,31 @@ internal fun TotalsChart(
     CartesianChartHost(
         chart =
         rememberCartesianChart(
-            rememberColumnCartesianLayer(
-                columnProvider =
-                ColumnCartesianLayer.ColumnProvider.series(
-                    columnChartColors.map { color ->
-                        rememberLineComponent(color = color, thickness = 8.dp, shape = Shape.Rectangle)
-                    }
-                ),
-                mergeMode = { ColumnCartesianLayer.MergeMode.Stacked },
-                verticalAxisPosition = AxisPosition.Vertical.Start,
-            ),
 
+            totalCartesianColumnLayer(colorIds = listOf(
+                R.color.consumption,
+                R.color.battery,
+                R.color.export)),
+            totalCartesianColumnLayer(
+                colorIds = listOf(R.color.solar,
+                    R.color.battery,
+                    R.color.importColor)
+            ),
+            totalCartesianColumnLayer(colorIds = listOf(
+                R.color.car,
+                R.color.immersion,
+                R.color.DHW,
+                R.color.heating,
+                R.color.legionnaires,
+                R.color.combined,
+                R.color.battery,
+                R.color.consumption)
+            ),
             startAxis = rememberStartAxis(guideline = null),
             endAxis = rememberEndAxis(guideline = null),
-            bottomAxis = rememberBottomAxis(),
+            bottomAxis = rememberBottomAxis(
+                valueFormatter = { _, _, _ -> "" }
+            )
         ),
         modelProducer = modelProducer,
         modifier = modifier.fillMaxWidth(),
@@ -294,26 +474,44 @@ internal fun TotalsChart(
     )
 }
 
-
-object Defaults {
-    const val TRANSACTION_INTERVAL_MS = 2000L
-    const val MULTI_SERIES_COUNT = 3
-    const val ENTRY_COUNT = 50
-    const val MAX_Y = 20
-    const val COLUMN_LAYER_MIN_Y = 2
-    const val COLUMN_LAYER_RELATIVE_MAX_Y = MAX_Y - COLUMN_LAYER_MIN_Y
+@Composable
+fun totalCartesianColumnLayer(@ColorRes colorIds: List<Int>): ColumnCartesianLayer {
+    return rememberColumnCartesianLayer(
+        columnProvider =
+        ColumnCartesianLayer.ColumnProvider.series(
+            colorIds.map { color ->
+                rememberLineComponent(
+                    color = colorResource(id = color),
+                    thickness = 40.dp,
+                    shape = Shape.Rectangle)
+            }
+        ),
+        mergeMode = { ColumnCartesianLayer.MergeMode.Stacked },
+        verticalAxisPosition = AxisPosition.Vertical.Start,
+    )
 }
+
+fun ColumnCartesianLayerModel.BuilderScope.singleSeries(x: Int, vararg y: Number){
+    y.forEach {
+        series(listOf(x), listOf(it))
+    }
+}
+
+private fun frac(x: Float) = x - floor(x)
 @Preview(showBackground = true)
 @Composable
 fun PreviewHistory() {
     EnergyHubTheme(darkTheme = false) {
+        val hrs = (0..<24*4).map{ it / 4f}
+
         ChartLayout(HistoryUiState(
-            timestamps = (0..23).map {
+            timestamps = hrs.map {
                     OffsetDateTime(
-                        LocalDateTime(2024, 6, 1, it, 0, 0),
+                        LocalDateTime(2024, 6, 1,
+                            floor(it).toInt(), round(frac(it)*60).toInt(), 0),
                         TimeZone.UTC)
                                      },
-            batteryPercentage = (0..23).map { it*100f/23f },
+            batteryPercentage = hrs.map { it*100f/24f },
             timezone = TimeZone.UTC,//TimeZone.of("Europe/London"),
         )
         )
