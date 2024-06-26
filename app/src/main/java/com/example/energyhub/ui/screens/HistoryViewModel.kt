@@ -1,5 +1,7 @@
 package com.example.energyhub.ui.screens
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SelectableDates
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -32,9 +34,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
+import kotlin.time.Duration.Companion.days
 
 const val DISPLAY_SCALE_FACTOR = 1000
 
@@ -44,12 +53,56 @@ class HistoryViewModel(
     private val diverterModel: MyEnergiModel,
     private val timezone: TimeZone,
     ): ViewModel() {
-    private val _uiState = MutableStateFlow(HistoryUiState(timezone=timezone))
-    val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
     private var date by mutableStateOf(Clock.System.todayIn(Config.location.timezone))
+    private val _uiState = MutableStateFlow(
+        HistoryUiState(
+            timezone=timezone,
+            date = date,
+        ))
+    val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
 
     init {
         getHistory()
+    }
+
+    @Suppress("PropertyName")
+    @OptIn(ExperimentalMaterial3Api::class)
+    val DatesInThePast = object: SelectableDates {
+
+        override fun isSelectableYear(year: Int): Boolean {
+            return year <= Clock.System.todayIn(timezone).year
+        }
+
+        override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+            return utcTimeMillis <= Clock.System.now().plus(1.days).toLocalDateTime(timezone).toInstant(timezone).toEpochMilliseconds()
+        }
+    }
+
+    fun convertMillisToLocalDate(millis: Long) : LocalDate {
+        return Instant
+            .fromEpochMilliseconds(millis)
+            .toLocalDateTime(timezone)
+            .date
+    }
+
+
+    fun setDateTo(newDate: LocalDate?){
+        if (newDate == null)
+            return
+        date = newDate
+        getHistory()
+    }
+
+    fun incrementDate(){
+        setDateTo(date - DatePeriod(days = 1))
+    }
+
+    fun decrementDate(){
+        setDateTo(date + DatePeriod(days = 1))
+    }
+
+    fun goToToday(){
+        setDateTo(Clock.System.todayIn(timezone))
     }
 
     private fun getHistory() {
@@ -315,6 +368,7 @@ data class HistoryUiState(
     var errors: List<ErrorType> = listOf(),
 
     val timezone: TimeZone,
+    val date: LocalDate,
 //    val solarResource: Resource<SolarHistory> = Resource.Success(SolarHistory()),
 //    val batteryResource: Resource<Battery> = Resource.Success(EmptyBattery())
 ){
