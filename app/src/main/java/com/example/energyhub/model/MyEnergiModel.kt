@@ -18,7 +18,11 @@ class MyEnergiModel(
 
     private lateinit var zappiSerial: String
     private lateinit var eddiSerial: String
-    private val client: MyEnergiClient = MyEnergiClient (username, password, invalidSerials)
+    private val client: MyEnergiClient = MyEnergiClient(
+        username,
+        password,
+        invalidSerials,
+        timezone)
 
     override suspend fun refreshUnsafe(): MyEnergiSystem {
         val status = client.getCurrentStatus()
@@ -31,8 +35,8 @@ class MyEnergiModel(
 
         val zappiData = client.getMinuteData(zappiSerial, date)
         val zappiHourData = client.getHourData(zappiSerial, date)
-        val eddiData = client.getMinuteData(zappiSerial, date)
-        val eddiHourData = client.getHourData(zappiSerial, date)
+        val eddiData = client.getMinuteData(eddiSerial, date)
+        val eddiHourData = client.getHourData(eddiSerial, date)
         return MyEnergiHistory(
             zappi = MyEnergiDeviceHistory.fromMinuteHourData(zappiData, zappiHourData, timezone),
             eddi = MyEnergiDeviceHistory.fromMinuteHourData(eddiData, eddiHourData, timezone)
@@ -41,9 +45,9 @@ class MyEnergiModel(
 }
 
 fun DetailHistory.meanVoltagePerHour(): Map<Int, Double> {
-    return (0..24).associate { hour ->
+    return (0..24).associateWith { hour ->
         val meanV = this.voltage.filterIndexed { i, v -> this.timestamps[i].hour == hour }.average()
-        Pair(hour, meanV)
+        meanV
     }
 }
 
@@ -54,7 +58,7 @@ private data class EnergyData(
     val boostEnergy: Float,
 ){
     val totalEnergy: Float
-        get() = divertedEnergy + boostEnergy
+        get() = divertedEnergy + boostEnergy + importEnergy
 }
 
 private fun HourData.toEnergies(meanVoltagePerHour: Map<Int, Double>): EnergyData {

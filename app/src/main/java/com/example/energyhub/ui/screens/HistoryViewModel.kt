@@ -21,6 +21,7 @@ import com.example.energyhub.model.Resource
 import com.example.energyhub.model.SolarEdgeModel
 import com.example.energyhub.model.SolarHistory
 import com.example.energyhub.model.div
+import com.example.energyhub.model.integratePowers
 import com.example.energyhub.model.mapInPlace
 import com.example.energyhub.model.plus
 import com.example.energyhub.model.minus
@@ -94,11 +95,11 @@ class HistoryViewModel(
     }
 
     fun incrementDate(){
-        setDateTo(date - DatePeriod(days = 1))
+        setDateTo(date + DatePeriod(days = 1))
     }
 
     fun decrementDate(){
-        setDateTo(date + DatePeriod(days = 1))
+        setDateTo(date - DatePeriod(days = 1))
     }
 
     fun goToToday(){
@@ -197,9 +198,12 @@ class HistoryViewModel(
             refTimestamps, battery.timestamps,
             battery.chargePercentage
         )
-        val batteryState = batteryStateFull.zip(refTimestamps).mapNotNull {
-            (value, ts) ->  if (ts <= battery.timestamps.last()) value else null}
-
+        val batteryState = if (battery.timestamps.isEmpty()) {
+            listOf()
+        } else {
+             batteryStateFull.zip(refTimestamps)
+                .mapNotNull { (value, ts) -> if (ts <= battery.timestamps.last()) value else null }
+        }
 
         val otherConsumption = consumptionPower - (carChargePower + immersionPower +
                 dhwPower + heatingPower
@@ -209,7 +213,8 @@ class HistoryViewModel(
         val solarProduction = generationPower + batterySolarCharging - batteryDischarging
         val solarConsumption = solarProduction - (exportPower + batterySolarCharging)
 
-        val netBatteryChargeFromGrid = battery.storedEnergy.last() - battery.storedEnergy.first()
+
+        val netBatteryChargeFromGrid = battery.totalChargeFromGrid - battery.totalDischarge
         var totalConsumption = if (battery.totalChargeFromGrid > 0f) {
             solar.totalConsumption + netBatteryChargeFromGrid
         }
@@ -244,12 +249,29 @@ class HistoryViewModel(
                 batteryPercentage = batteryState,
                 totalBatteryDischargeEnergy = batteryDischargeEnergy / DISPLAY_SCALE_FACTOR,
                 totalImport = solar.totalImport / DISPLAY_SCALE_FACTOR,
+                carEnergy = diverter.zappi.totalEnergy / DISPLAY_SCALE_FACTOR,
+                immersionEnergy = diverter.eddi.totalEnergy / DISPLAY_SCALE_FACTOR,
                 dhwEnergy = heatPump.dhwEnergy / DISPLAY_SCALE_FACTOR,
                 heatingEnergy = heatPump.heatingEnergy / DISPLAY_SCALE_FACTOR,
                 legionnairesEnergy = heatPump.legionnairesEnergy / DISPLAY_SCALE_FACTOR,
                 combinedHPEnergy = heatPump.combinedEnergy / DISPLAY_SCALE_FACTOR,
                 remainingEnergy = remainingEnergy / DISPLAY_SCALE_FACTOR,
+
+
+                carChargePower = carChargePower / DISPLAY_SCALE_FACTOR,
+                immersionPower = immersionPower / DISPLAY_SCALE_FACTOR,
+                dhwPower = dhwPower / DISPLAY_SCALE_FACTOR,
+                heatingPower = heatingPower / DISPLAY_SCALE_FACTOR,
+                legionnairesPower = legionnairesPower / DISPLAY_SCALE_FACTOR,
+                combinedPower = combinedPower / DISPLAY_SCALE_FACTOR,
+                unknownHeatPumpPower = unknownHeatPumpPower / DISPLAY_SCALE_FACTOR,
+                batteryGridCharging = batteryGridCharging / DISPLAY_SCALE_FACTOR,
+                remainingLoad = otherConsumption / DISPLAY_SCALE_FACTOR,
+
+                batteryDischarging = batteryDischarging / DISPLAY_SCALE_FACTOR,
+
                 timezone = timezone,
+                date = date,
             )
         }
 
@@ -353,17 +375,25 @@ data class HistoryUiState(
     val totalExport: Float = 0f,
     val totalImport: Float = 0f,
 
-    val zappiEnergy: Float = 0f,
-    val eddiEnergy: Float = 0f,
-
+    val carEnergy: Float = 0f,
+    val immersionEnergy: Float = 0f,
     val dhwEnergy: Float = 0f,
     val heatingEnergy: Float = 0f,
     val legionnairesEnergy: Float = 0f,
     val combinedHPEnergy: Float = 0f,
     val remainingEnergy: Float = 0f,
 
-
+    val carChargePower: List<Float> = listOf(),
+    val immersionPower: List<Float> = listOf(),
+    val dhwPower: List<Float> = listOf(),
+    val heatingPower: List<Float> = listOf(),
+    val legionnairesPower: List<Float> = listOf(),
+    val combinedPower: List<Float> = listOf(),
+    val unknownHeatPumpPower: List<Float> = listOf(),
+    val batteryGridCharging: List<Float> = listOf(),
+    val remainingLoad: List<Float> = listOf(),
     val batteryPercentage: List<Float> = listOf(),
+    val batteryDischarging: List<Float> = listOf(),
 
     var errors: List<ErrorType> = listOf(),
 

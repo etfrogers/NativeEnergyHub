@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
@@ -39,29 +38,23 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.energyhub.R
 import com.example.energyhub.model.OffsetDateTime
-import com.example.energyhub.model.toFractionalHours
 import com.example.energyhub.ui.theme.EnergyHubTheme
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberEndAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineSpec
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
-import com.patrykandpatrick.vico.compose.common.shader.color
-import com.patrykandpatrick.vico.core.cartesian.Zoom
-import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
-import com.patrykandpatrick.vico.core.common.shader.DynamicShader
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
 import kotlinx.datetime.format.char
+import kotlinx.datetime.todayIn
 import kotlin.math.floor
 import kotlin.math.round
 
@@ -155,10 +148,13 @@ fun DateSelector(uiState: HistoryUiState,
                     fontSize = TextUnit(20f, TextUnitType.Sp)
                 )
             }
-            IconButton(onClick = onNext) {
+            IconButton(
+                onClick = onNext,
+                enabled = uiState.date < Clock.System.todayIn(TimeZone.UTC)
+            ) {
                 Image(
                     imageVector = Icons.AutoMirrored.Default.ArrowForward,
-                    contentDescription = "Previous"
+                    contentDescription = "Next"
                 )
             }
             IconButton(
@@ -176,14 +172,14 @@ fun DateSelector(uiState: HistoryUiState,
                 onDismissRequest = onCancel,
                 confirmButton = {
                     Button(
-                        onClick = onCancel
+                        onClick = { onNewDate(pickerState.selectedDateMillis) }
                     ) {
                         Text(text = "OK")
                     }
                 },
                 dismissButton = {
                     Button(
-                        onClick = { onNewDate(pickerState.selectedDateMillis) }
+                        onClick = onCancel
                     ) {
                         Text(text = "Cancel")
                     }
@@ -226,55 +222,12 @@ fun ChartLayout(
             modifier = Modifier.fillMaxWidth()
         )
         TotalsChart(uiState)
+        ConsumptionChart(uiState)
+//        ConsumptionSourceChart(uiState)
+//        GenerationDestinationChart(uiState)
         BatteryChart(uiState)//, Modifier.fillMaxWidth())
     }
 }
-
-@Composable
-internal fun BatteryChart(uiState: HistoryUiState, modifier: Modifier = Modifier) {
-    val modelProducer = remember { CartesianChartModelProducer.build() }
-    modelProducer.tryRunTransaction {
-        /* Learn more:
-        https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/line-layer#data. */
-        if (uiState.fractionalHours.isNotEmpty()) {
-            lineSeries {
-                series(
-                    uiState.fractionalHours,
-                    uiState.batteryPercentage
-                )
-            }
-        }
-    }
-
-    val marker = rememberMarker()
-    CartesianChartHost(
-        chart =
-        rememberCartesianChart(
-            rememberLineCartesianLayer(
-                listOf(rememberLineSpec(DynamicShader.color(colorResource(id = R.color.battery)))),
-                axisValueOverrider = AxisValueOverrider.fixed(
-                    minX = 0f, maxX = 24f, minY = 0f, maxY = 100f)
-            ),
-            startAxis = rememberStartAxis(),
-            bottomAxis = rememberBottomAxis(
-                guideline = null,
-                itemPlacer = HorizontalAxisItemPlacer(
-                    spacing = 12,
-                    shiftExtremeTicks = true
-                )
-            ),
-            persistentMarkers = mapOf(
-                Clock.System.now().toFractionalHours(uiState.timezone)
-                        to marker),
-
-        ),
-        modelProducer = modelProducer,
-        modifier = modifier.fillMaxWidth(),
-        marker = marker,
-        zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-    )
-}
-
 
 @Composable
 internal fun TotalsChart(
@@ -306,8 +259,8 @@ internal fun TotalsChart(
         columnSeries {
             singleSeries(
                 2,
-                uiState.zappiEnergy,
-                uiState.eddiEnergy,
+                uiState.carEnergy,
+                uiState.immersionEnergy,
                 uiState.dhwEnergy,
                 uiState.heatingEnergy,
                 uiState.legionnairesEnergy,
@@ -355,6 +308,73 @@ internal fun TotalsChart(
     )
 }
 
+@Composable
+internal fun ConsumptionChart(
+    uiState: HistoryUiState,
+    modifier: Modifier = Modifier
+) {
+    val modelProducer = remember { CartesianChartModelProducer.build() }
+    modelProducer.tryRunTransaction {
+        /* Learn more:
+        https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/line-layer#data. */
+        if (uiState.fractionalHours.isNotEmpty()) {
+            lineSeries {
+                stackedSeries(
+                    uiState.fractionalHours,
+                    uiState.carChargePower,
+                    uiState.immersionPower,
+                    uiState.dhwPower,
+                    uiState.heatingPower,
+                    uiState.legionnairesPower,
+                    uiState.combinedPower,
+                    uiState.unknownHeatPumpPower,
+                    uiState.batteryGridCharging,
+                    uiState.remainingLoad,)
+            }
+        }
+    }
+    DailyChart(
+        colors = listOf(
+            R.color.car,
+            R.color.immersion,
+            R.color.DHW,
+            R.color.heating,
+            R.color.legionnaires,
+            R.color.combined,
+            R.color.heatPumpUnknown,
+            R.color.battery,
+            R.color.consumption,
+        ),
+        timezone = uiState.timezone,
+        modelProducer = modelProducer)
+
+}
+
+@Composable
+internal fun BatteryChart(uiState: HistoryUiState, modifier: Modifier = Modifier) {
+    val modelProducer = remember { CartesianChartModelProducer.build() }
+    modelProducer.tryRunTransaction {
+        /* Learn more:
+        https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/line-layer#data. */
+        if (uiState.fractionalHours.isNotEmpty()) {
+            lineSeries {
+                series(
+                    uiState.fractionalHours,
+                    uiState.batteryPercentage
+                )
+            }
+        }
+    }
+
+    DailyChart(
+        colors = listOf(R.color.battery),
+        timezone = uiState.timezone,
+        modelProducer = modelProducer,
+        maxY = 100f,
+    )
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
@@ -362,7 +382,7 @@ fun PreviewHistory() {
     EnergyHubTheme(darkTheme = false) {
         fun frac(x: Float) = x - floor(x)
         val hrs = (0..<24*4).map{ it / 4f}
-
+        val ones = (Array(hrs.size) { 1f }).toList()
         ChartLayout(HistoryUiState(
             timestamps = hrs.map {
                     OffsetDateTime(
@@ -371,6 +391,15 @@ fun PreviewHistory() {
                         TimeZone.UTC)
                                      },
             batteryPercentage = hrs.map { it*100f/24f },
+            carChargePower = ones,
+            immersionPower = ones,
+            dhwPower = ones,
+            heatingPower = ones,
+            legionnairesPower = ones,
+            combinedPower = ones,
+            unknownHeatPumpPower = ones,
+            batteryGridCharging = ones,
+            remainingLoad = ones,
             timezone = TimeZone.UTC,//TimeZone.of("Europe/London"),
             date = LocalDate(2024, 3, 1),
         ),

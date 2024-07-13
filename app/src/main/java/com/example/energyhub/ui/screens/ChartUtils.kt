@@ -3,41 +3,61 @@ package com.example.energyhub.ui.screens
 import android.graphics.Typeface
 import android.text.Layout
 import androidx.annotation.ColorRes
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
+import com.example.energyhub.model.toFractionalHours
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineSpec
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.component.fixed
 import com.patrykandpatrick.vico.compose.common.component.rememberLayeredComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.of
+import com.patrykandpatrick.vico.compose.common.shader.color
 import com.patrykandpatrick.vico.compose.common.shape.markerCornered
 import com.patrykandpatrick.vico.core.cartesian.CartesianDrawContext
 import com.patrykandpatrick.vico.core.cartesian.CartesianMeasureContext
 import com.patrykandpatrick.vico.core.cartesian.HorizontalDimensions
 import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
 import com.patrykandpatrick.vico.core.cartesian.Insets
+import com.patrykandpatrick.vico.core.cartesian.Zoom
 import com.patrykandpatrick.vico.core.cartesian.axis.AxisItemPlacer
 import com.patrykandpatrick.vico.core.cartesian.axis.AxisPosition
+import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.ChartValues
 import com.patrykandpatrick.vico.core.cartesian.data.ColumnCartesianLayerModel
+import com.patrykandpatrick.vico.core.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.core.common.Dimensions
 import com.patrykandpatrick.vico.core.common.component.TextComponent
+import com.patrykandpatrick.vico.core.common.shader.DynamicShader
 import com.patrykandpatrick.vico.core.common.shape.Corner
 import com.patrykandpatrick.vico.core.common.shape.Shape
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.round
+import com.example.energyhub.model.plusAssign
+import com.example.energyhub.model.plus
 
 internal class HorizontalAxisItemPlacer(
     private val spacing: Int,
@@ -262,8 +282,53 @@ fun totalCartesianColumnLayer(@ColorRes colorIds: List<Int>): ColumnCartesianLay
     )
 }
 
-fun ColumnCartesianLayerModel.BuilderScope.singleSeries(x: Int, vararg y: Number){
+internal fun ColumnCartesianLayerModel.BuilderScope.singleSeries(x: Int, vararg y: Number){
     y.forEach {
         series(listOf(x), listOf(it))
     }
+}
+
+internal fun LineCartesianLayerModel.BuilderScope.stackedSeries(x: List<Number>, vararg y: List<Number>){
+    val baseline = Array(x.size) {0f}.toMutableList()
+    y.forEach {
+        series(x, it + baseline)
+        baseline.plusAssign(it)
+    }
+}
+
+@Composable
+fun DailyChart(
+    @ColorRes colors: List<Int>,
+    timezone: TimeZone,
+    modelProducer: CartesianChartModelProducer,
+    modifier: Modifier = Modifier,
+    maxY: Float? = null,
+){
+    val marker = rememberMarker()
+    CartesianChartHost(
+        chart =
+        rememberCartesianChart(
+            rememberLineCartesianLayer(
+                colors.map { rememberLineSpec(DynamicShader.color(colorResource(id = it))) },
+                axisValueOverrider = AxisValueOverrider.fixed(
+                    minX = 0f, maxX = 24f, minY = 0f, maxY = maxY)
+            ),
+            startAxis = rememberStartAxis(),
+            bottomAxis = rememberBottomAxis(
+                guideline = null,
+                itemPlacer = HorizontalAxisItemPlacer(
+                    spacing = 12,
+                    shiftExtremeTicks = true
+                )
+            ),
+            persistentMarkers = mapOf(
+                Clock.System.now().toFractionalHours(timezone)
+                        to marker),
+
+            ),
+        modelProducer = modelProducer,
+        modifier = modifier.fillMaxWidth(),
+        marker = marker,
+        zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
+    )
 }
