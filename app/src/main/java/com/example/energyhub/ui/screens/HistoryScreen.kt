@@ -298,11 +298,11 @@ internal fun TotalsChart(
             endAxis = rememberEndAxis(guideline = null),
             bottomAxis = rememberBottomAxis(
                 valueFormatter = { _, _, _ -> "" }
-            )
+            ),
+            marker = rememberMarker(),
         ),
         modelProducer = modelProducer,
         modifier = modifier.fillMaxWidth(),
-        marker = rememberMarker(),
         runInitialAnimation = false,
         zoomState = rememberVicoZoomState(zoomEnabled = false),
     )

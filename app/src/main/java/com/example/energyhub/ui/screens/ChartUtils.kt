@@ -19,7 +19,7 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineSpec
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.component.fixed
@@ -36,7 +36,7 @@ import com.patrykandpatrick.vico.core.cartesian.HorizontalDimensions
 import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
 import com.patrykandpatrick.vico.core.cartesian.Insets
 import com.patrykandpatrick.vico.core.cartesian.Zoom
-import com.patrykandpatrick.vico.core.cartesian.axis.AxisItemPlacer
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis.ItemPlacer
 import com.patrykandpatrick.vico.core.cartesian.axis.AxisPosition
 import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
@@ -58,13 +58,15 @@ import kotlin.math.floor
 import kotlin.math.round
 import com.example.energyhub.model.plusAssign
 import com.example.energyhub.model.plus
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 
 internal class HorizontalAxisItemPlacer(
     private val spacing: Int,
     private val offset: Int = 0,
     private val shiftExtremeTicks: Boolean,
     private val addExtremeLabelPadding: Boolean = false,
-) : AxisItemPlacer.Horizontal {
+) : HorizontalAxis.ItemPlacer {
     private val CartesianMeasureContext.addExtremeLabelPadding
         get() =
             this@HorizontalAxisItemPlacer.addExtremeLabelPadding &&
@@ -78,7 +80,7 @@ internal class HorizontalAxisItemPlacer(
             if (xLength >= 2 * xStep) add(minX + xStep * round((xLength / 2) / xStep))
         }
 
-    override fun getShiftExtremeTicks(context: CartesianDrawContext): Boolean = shiftExtremeTicks
+    override fun getShiftExtremeLines(context: CartesianDrawContext): Boolean = shiftExtremeTicks
 
     override fun getFirstLabelValue(context: CartesianMeasureContext, maxLabelWidth: Float) =
         if (context.addExtremeLabelPadding)
@@ -193,11 +195,11 @@ internal fun rememberMarker(
 ): CartesianMarker {
     val labelBackgroundShape = Shape.markerCornered(Corner.FullyRounded)
     val labelBackground =
-        rememberShapeComponent(labelBackgroundShape, MaterialTheme.colorScheme.surface)
+        rememberShapeComponent(shape = labelBackgroundShape, color = MaterialTheme.colorScheme.surface)
             .setShadow(
                 radius = LABEL_BACKGROUND_SHADOW_RADIUS_DP,
                 dy = LABEL_BACKGROUND_SHADOW_DY_DP,
-                applyElevationOverlay = true,
+//                applyElevationOverlay = true,
             )
     val label =
         rememberTextComponent(
@@ -209,9 +211,11 @@ internal fun rememberMarker(
             minWidth = TextComponent.MinWidth.fixed(40.dp),
         )
     val indicatorFrontComponent =
-        rememberShapeComponent(Shape.Pill, MaterialTheme.colorScheme.surface)
-    val indicatorCenterComponent = rememberShapeComponent(Shape.Pill)
-    val indicatorRearComponent = rememberShapeComponent(Shape.Pill)
+        rememberShapeComponent(
+            shape = Shape.Pill,
+            color = MaterialTheme.colorScheme.surface)
+    val indicatorCenterComponent = rememberShapeComponent(shape = Shape.Pill)
+    val indicatorRearComponent = rememberShapeComponent(shape = Shape.Pill)
     val indicator =
         rememberLayeredComponent(
             rear = indicatorRearComponent,
@@ -243,19 +247,19 @@ internal fun rememberMarker(
                 },
                 guideline = guideline,
             ) {
-            override fun getInsets(
-                context: CartesianMeasureContext,
-                outInsets: Insets,
-                horizontalDimensions: HorizontalDimensions,
-            ) {
-                with(context) {
-                    super.getInsets(context, outInsets, horizontalDimensions)
-                    val baseShadowInsetDp =
-                        CLIPPING_FREE_SHADOW_RADIUS_MULTIPLIER * LABEL_BACKGROUND_SHADOW_RADIUS_DP
-                    outInsets.top += (baseShadowInsetDp - LABEL_BACKGROUND_SHADOW_DY_DP).pixels
-                    outInsets.bottom += (baseShadowInsetDp + LABEL_BACKGROUND_SHADOW_DY_DP).pixels
-                }
-            }
+//            override fun updateInsets(
+//                context: CartesianMeasureContext,
+//                outInsets: Insets,
+//                horizontalDimensions: HorizontalDimensions,
+//            ) {
+//                with(context) {
+//                    super.getInsets(context, outInsets, horizontalDimensions)
+//                    val baseShadowInsetDp =
+//                        CLIPPING_FREE_SHADOW_RADIUS_MULTIPLIER * LABEL_BACKGROUND_SHADOW_RADIUS_DP
+//                    outInsets.top += (baseShadowInsetDp - LABEL_BACKGROUND_SHADOW_DY_DP).pixels
+//                    outInsets.bottom += (baseShadowInsetDp + LABEL_BACKGROUND_SHADOW_DY_DP).pixels
+//                }
+//            }
         }
     }
 }
@@ -309,7 +313,9 @@ fun DailyChart(
         chart =
         rememberCartesianChart(
             rememberLineCartesianLayer(
-                colors.map { rememberLineSpec(DynamicShader.color(colorResource(id = it))) },
+                LineCartesianLayer.LineProvider.series(
+                    colors.map { rememberLine(DynamicShader.color(colorResource(id = it))) },
+                ),
                 axisValueOverrider = AxisValueOverrider.fixed(
                     minX = 0f, maxX = 24f, minY = 0f, maxY = maxY)
             ),
@@ -321,14 +327,13 @@ fun DailyChart(
                     shiftExtremeTicks = true
                 )
             ),
-            persistentMarkers = mapOf(
-                Clock.System.now().toFractionalHours(timezone)
-                        to marker),
-
+//            persistentMarkers = mapOf(
+//                Clock.System.now().toFractionalHours(timezone)
+//                        to marker),
+            marker = marker,
             ),
         modelProducer = modelProducer,
         modifier = modifier.fillMaxWidth(),
-        marker = marker,
         zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
     )
 }
