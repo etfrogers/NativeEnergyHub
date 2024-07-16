@@ -122,6 +122,7 @@ fun DateSelector(uiState: HistoryUiState,
                  validDates: SelectableDates,
 ){
     val pickerState = rememberDatePickerState(
+        yearRange = 2021..Clock.System.todayIn(TimeZone.UTC).year,
         selectableDates = validDates,
     )
 
