@@ -270,6 +270,9 @@ class HistoryViewModel(
 
                 batteryDischarging = batteryDischarging / DISPLAY_SCALE_FACTOR,
 
+                solarConsumption = solarConsumption / DISPLAY_SCALE_FACTOR,
+                exportPower = exportPower / DISPLAY_SCALE_FACTOR,
+                batterySolarCharging = batterySolarCharging / DISPLAY_SCALE_FACTOR,
                 timezone = timezone,
                 date = date,
             )
@@ -394,6 +397,9 @@ data class HistoryUiState(
     val remainingLoad: List<Float> = listOf(),
     val batteryPercentage: List<Float> = listOf(),
     val batteryDischarging: List<Float> = listOf(),
+    val batterySolarCharging: List<Float> = listOf(),
+    val exportPower: List<Float> = listOf(),
+    val solarConsumption: List<Float> = listOf(),
 
     var errors: List<ErrorType> = listOf(),
 

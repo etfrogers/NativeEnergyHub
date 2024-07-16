@@ -105,7 +105,7 @@ fun HistoryScreen (
 
 
 internal val dateButtonFormat = LocalDate.Format {
-    dayOfMonth(); char('/'); monthNumber(); char('/'); year();
+    dayOfMonth(); char('/'); monthNumber(); char('/'); year()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -225,7 +225,7 @@ fun ChartLayout(
         TotalsChart(uiState)
         ConsumptionChart(uiState)
 //        ConsumptionSourceChart(uiState)
-//        GenerationDestinationChart(uiState)
+        GenerationDestinationChart(uiState)
         BatteryChart(uiState)//, Modifier.fillMaxWidth())
     }
 }
@@ -235,7 +235,7 @@ internal fun TotalsChart(
     uiState: HistoryUiState,
     modifier: Modifier = Modifier
 ) {
-    val modelProducer = remember { CartesianChartModelProducer.build() }
+    val modelProducer = remember { CartesianChartModelProducer() }
     modelProducer.tryRunTransaction {
         /* Learn more:
         https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/column-layer#data. */
@@ -314,7 +314,7 @@ internal fun ConsumptionChart(
     uiState: HistoryUiState,
     modifier: Modifier = Modifier
 ) {
-    val modelProducer = remember { CartesianChartModelProducer.build() }
+    val modelProducer = remember { CartesianChartModelProducer() }
     modelProducer.tryRunTransaction {
         /* Learn more:
         https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/line-layer#data. */
@@ -347,13 +347,13 @@ internal fun ConsumptionChart(
             R.color.consumption,
         ),
         timezone = uiState.timezone,
-        modelProducer = modelProducer)
-
+        modelProducer = modelProducer,
+        modifier = modifier)
 }
 
 @Composable
 internal fun BatteryChart(uiState: HistoryUiState, modifier: Modifier = Modifier) {
-    val modelProducer = remember { CartesianChartModelProducer.build() }
+    val modelProducer = remember { CartesianChartModelProducer() }
     modelProducer.tryRunTransaction {
         /* Learn more:
         https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/line-layer#data. */
@@ -372,7 +372,38 @@ internal fun BatteryChart(uiState: HistoryUiState, modifier: Modifier = Modifier
         timezone = uiState.timezone,
         modelProducer = modelProducer,
         maxY = 100f,
+        modifier = modifier
     )
+}
+
+@Composable
+internal fun GenerationDestinationChart(
+    uiState: HistoryUiState,
+    modifier: Modifier = Modifier
+) {
+    val modelProducer = remember { CartesianChartModelProducer() }
+    modelProducer.tryRunTransaction {
+        /* Learn more:
+        https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/line-layer#data. */
+        if (uiState.fractionalHours.isNotEmpty()) {
+            lineSeries {
+                stackedSeries(
+                    uiState.fractionalHours,
+                    uiState.solarConsumption,
+                    uiState.batterySolarCharging,
+                    uiState.exportPower,)
+            }
+        }
+    }
+    DailyChart(
+        colors = listOf(
+            R.color.solar,
+            R.color.battery,
+            R.color.export,
+        ),
+        timezone = uiState.timezone,
+        modelProducer = modelProducer,
+        modifier = modifier)
 }
 
 

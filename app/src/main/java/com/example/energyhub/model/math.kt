@@ -33,12 +33,28 @@ operator fun MutableList<Float>.plusAssign(other: List<Number>) {
     this.mapInPlacePairwise(other) { t, o -> t + o.toFloat() }
 }
 
+operator fun MutableList<Float>.minusAssign(other: List<Number>) {
+    assertEqualSizes(this, other)
+    this.mapInPlacePairwise(other) { t, o -> t - o.toFloat() }
+}
+
 operator fun List<Number>.times(other: Number): List<Float> {
     return this.map { t -> other.toFloat() * t.toFloat() }
 }
 
 operator fun List<Number>.div(other: Number): List<Float> {
     return this.map { t -> t.toFloat() / other.toFloat() }
+}
+
+fun List<List<Number>>.sum(): List<Float>{
+    if (this.isEmpty()) {
+        return listOf()
+    }
+    val total = Array(this.first().size){ 0f }.toMutableList()
+    this.forEach {
+        total += it
+    }
+    return total.toList()
 }
 
 fun integratePowers(powers: List<Float>, timestamps: List<OffsetDateTime>): Float {

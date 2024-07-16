@@ -12,7 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
-import com.example.energyhub.model.toFractionalHours
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
@@ -34,9 +33,7 @@ import com.patrykandpatrick.vico.core.cartesian.CartesianDrawContext
 import com.patrykandpatrick.vico.core.cartesian.CartesianMeasureContext
 import com.patrykandpatrick.vico.core.cartesian.HorizontalDimensions
 import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
-import com.patrykandpatrick.vico.core.cartesian.Insets
 import com.patrykandpatrick.vico.core.cartesian.Zoom
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis.ItemPlacer
 import com.patrykandpatrick.vico.core.cartesian.axis.AxisPosition
 import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
@@ -51,13 +48,12 @@ import com.patrykandpatrick.vico.core.common.component.TextComponent
 import com.patrykandpatrick.vico.core.common.shader.DynamicShader
 import com.patrykandpatrick.vico.core.common.shape.Corner
 import com.patrykandpatrick.vico.core.common.shape.Shape
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.round
-import com.example.energyhub.model.plusAssign
-import com.example.energyhub.model.plus
+import com.example.energyhub.model.minusAssign
+import com.example.energyhub.model.sum
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 
@@ -293,10 +289,10 @@ internal fun ColumnCartesianLayerModel.BuilderScope.singleSeries(x: Int, vararg 
 }
 
 internal fun LineCartesianLayerModel.BuilderScope.stackedSeries(x: List<Number>, vararg y: List<Number>){
-    val baseline = Array(x.size) {0f}.toMutableList()
+    val topLine = y.toList().sum().toMutableList()
     y.forEach {
-        series(x, it + baseline)
-        baseline.plusAssign(it)
+        series(x, topLine)
+        topLine -= it
     }
 }
 
@@ -314,7 +310,14 @@ fun DailyChart(
         rememberCartesianChart(
             rememberLineCartesianLayer(
                 LineCartesianLayer.LineProvider.series(
-                    colors.map { rememberLine(DynamicShader.color(colorResource(id = it))) },
+                    colors.map {
+                        colorResource(id = it).let { color ->
+                            rememberLine(
+                                shader = DynamicShader.color(color),
+                                backgroundShader = DynamicShader.color(color)
+                            )
+                        }
+                               },
                 ),
                 axisValueOverrider = AxisValueOverrider.fixed(
                     minX = 0f, maxX = 24f, minY = 0f, maxY = maxY)
