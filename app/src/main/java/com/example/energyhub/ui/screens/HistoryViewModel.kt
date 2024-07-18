@@ -142,7 +142,7 @@ class HistoryViewModel(
         ).mapNotNull {
             if (it is Resource.Error) it.error else null
         }
-        if (solarResource is Resource.Error) {
+        if (errors.isNotEmpty()) {
             _uiState.update { currentState ->
                 currentState.copy(
                     errors = errors,
