@@ -272,6 +272,7 @@ class HistoryViewModel(
 
                 solarConsumption = solarConsumption / DISPLAY_SCALE_FACTOR,
                 exportPower = exportPower / DISPLAY_SCALE_FACTOR,
+                importPower = importPower / DISPLAY_SCALE_FACTOR,
                 batterySolarCharging = batterySolarCharging / DISPLAY_SCALE_FACTOR,
                 timezone = timezone,
                 date = date,
@@ -399,17 +400,13 @@ data class HistoryUiState(
     val batteryDischarging: List<Float> = listOf(),
     val batterySolarCharging: List<Float> = listOf(),
     val exportPower: List<Float> = listOf(),
+    val importPower: List<Float> = listOf(),
     val solarConsumption: List<Float> = listOf(),
 
     var errors: List<ErrorType> = listOf(),
 
     val timezone: TimeZone,
     val date: LocalDate,
-//    val solarResource: Resource<SolarHistory> = Resource.Success(SolarHistory()),
-//    val batteryResource: Resource<Battery> = Resource.Success(EmptyBattery())
 ){
     val fractionalHours: List<Float> by lazy { timestamps.toHours() }
-
-//    val solar: SolarHistory = dataOrEmpty(solarResource, ::SolarHistory)
-//    val battery: Battery = dataOrEmpty(batteryResource, ::EmptyBattery)
 }

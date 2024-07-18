@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -209,24 +210,26 @@ fun ChartLayout(
     modifier: Modifier = Modifier,
     validDates: SelectableDates = DatePickerDefaults.AllDates,
 ){
-    Column(modifier = modifier) {
-        DateSelector(
-            uiState = uiState,
-            onNext = onNext,
-            onPrev = onPrev,
-            onToday = onToday,
-            onSelect = onSelect,
-            onNewDate = onNewDate,
-            onCancel = onCancel,
-            showPicker = showPicker,
-            validDates = validDates,
-            modifier = Modifier.fillMaxWidth()
-        )
-        TotalsChart(uiState)
-        ConsumptionChart(uiState)
-//        ConsumptionSourceChart(uiState)
-        GenerationDestinationChart(uiState)
-        BatteryChart(uiState)//, Modifier.fillMaxWidth())
+    LazyColumn(modifier = modifier) {
+        item {
+            DateSelector(
+                uiState = uiState,
+                onNext = onNext,
+                onPrev = onPrev,
+                onToday = onToday,
+                onSelect = onSelect,
+                onNewDate = onNewDate,
+                onCancel = onCancel,
+                showPicker = showPicker,
+                validDates = validDates,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        item {TotalsChart(uiState)}
+        item {ConsumptionChart(uiState)}
+        item {ConsumptionSourceChart(uiState)}
+        item {GenerationDestinationChart(uiState)}
+        item {BatteryChart(uiState)}
     }
 }
 
@@ -372,8 +375,39 @@ internal fun BatteryChart(uiState: HistoryUiState, modifier: Modifier = Modifier
         timezone = uiState.timezone,
         modelProducer = modelProducer,
         maxY = 100f,
-        modifier = modifier
+        modifier = modifier,
+        solidColor = false,
     )
+}
+
+@Composable
+internal fun ConsumptionSourceChart(
+    uiState: HistoryUiState,
+    modifier: Modifier = Modifier
+) {
+    val modelProducer = remember { CartesianChartModelProducer() }
+    modelProducer.tryRunTransaction {
+        /* Learn more:
+        https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/line-layer#data. */
+        if (uiState.fractionalHours.isNotEmpty()) {
+            lineSeries {
+                stackedSeries(
+                    uiState.fractionalHours,
+                    uiState.solarConsumption,
+                    uiState.batteryDischarging,
+                    uiState.importPower,)
+            }
+        }
+    }
+    DailyChart(
+        colors = listOf(
+            R.color.solar,
+            R.color.battery,
+            R.color.importColor,
+        ),
+        timezone = uiState.timezone,
+        modelProducer = modelProducer,
+        modifier = modifier)
 }
 
 @Composable

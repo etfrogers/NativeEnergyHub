@@ -58,7 +58,7 @@ private data class EnergyData(
     val boostEnergy: Float,
 ){
     val totalEnergy: Float
-        get() = divertedEnergy + boostEnergy + importEnergy
+        get() = divertedEnergy + boostEnergy
 }
 
 private fun HourData.toEnergies(meanVoltagePerHour: Map<Int, Double>): EnergyData {

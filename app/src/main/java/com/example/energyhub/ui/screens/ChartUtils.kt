@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.colorResource
@@ -54,6 +55,7 @@ import kotlin.math.floor
 import kotlin.math.round
 import com.example.energyhub.model.minusAssign
 import com.example.energyhub.model.sum
+import com.patrykandpatrick.vico.compose.common.shader.BrushShader
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 
@@ -303,6 +305,7 @@ fun DailyChart(
     modelProducer: CartesianChartModelProducer,
     modifier: Modifier = Modifier,
     maxY: Float? = null,
+    solidColor: Boolean = true
 ){
     val marker = rememberMarker()
     CartesianChartHost(
@@ -312,9 +315,16 @@ fun DailyChart(
                 LineCartesianLayer.LineProvider.series(
                     colors.map {
                         colorResource(id = it).let { color ->
+                            val bg = if (solidColor){
+                                DynamicShader.color(color)
+                            } else {
+                                BrushShader(Brush.verticalGradient(
+                                    listOf(color.copy(alpha = 0.5f), color.copy(alpha = 0f)))
+                                )
+                            }
                             rememberLine(
                                 shader = DynamicShader.color(color),
-                                backgroundShader = DynamicShader.color(color)
+                                backgroundShader = bg,
                             )
                         }
                                },
