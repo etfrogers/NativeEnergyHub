@@ -49,6 +49,7 @@ sealed class Resource<T> {
 sealed class ErrorType(exception: Exception) {
     val type: String? = exception::class.simpleName
     val msg: String? = exception.message
+    val stackTrace: Array<StackTraceElement> = exception.stackTrace
 
     sealed class Api(exception: Exception): ErrorType(exception) {
 //        data object Network: Api()

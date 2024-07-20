@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.IconButton
@@ -21,9 +22,18 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.energyhub.R
 import com.example.energyhub.model.ErrorType
 
 @Composable
@@ -31,6 +41,15 @@ fun ErrorLog(errors: List<ErrorType>,
              onClose: () -> Unit,
              modifier: Modifier = Modifier,
 ) {
+    val expList = Array(errors.size) { false }.toList()
+    val expanded = remember {
+        mutableStateListOf<Boolean>()
+    }
+    if (expList.size != expanded.size) {
+        expanded.clear()
+        expanded.addAll(expList)
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         Row(
             horizontalArrangement = Arrangement.End,
@@ -43,8 +62,12 @@ fun ErrorLog(errors: List<ErrorType>,
             }
         }
         LazyColumn {
-            items(errors) {
-                ErrorRecord(it, modifier.padding(8.dp))
+            itemsIndexed(errors) { index, it ->
+                ErrorRecord(
+                    error=it,
+                    onExpandContract = {expanded[index] = !expanded[index]},
+                    expanded = expanded[index],
+                    modifier = modifier.padding(8.dp),)
             }
         }
     }
@@ -53,12 +76,41 @@ fun ErrorLog(errors: List<ErrorType>,
 @Composable
 fun ErrorRecord(
     error: ErrorType,
+    onExpandContract: () -> Unit,
+    expanded: Boolean,
     modifier: Modifier = Modifier
 ){
     Box(modifier) {
         Column {
-            Text(error.type ?: "", style = MaterialTheme.typography.bodyLarge)
+            Row(modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onExpandContract) {
+                    if (expanded) {
+                        Image(
+                            painter = painterResource(id = R.drawable.arrow_down),
+                            contentDescription = "Show less")
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.arrow_right),
+                            contentDescription = "Show more"
+                        )
+                    }
+                }
+                Text(
+                    error.type ?: "",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+            }
             Text(error.msg ?: "", style = MaterialTheme.typography.bodyMedium)
+            if (expanded) {
+                val str = error.stackTrace.joinToString { it.toString() }
+                Text(
+                    text = str,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 8.dp))
+            }
         }
     }
 }
