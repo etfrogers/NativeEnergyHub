@@ -1,5 +1,6 @@
 package com.example.energyhub.ui.screens
 
+import android.animation.ArgbEvaluator
 import android.graphics.Typeface
 import android.text.Layout
 import androidx.annotation.ColorRes
@@ -264,7 +265,6 @@ internal fun rememberMarker(
 
 private const val LABEL_BACKGROUND_SHADOW_RADIUS_DP = 4f
 private const val LABEL_BACKGROUND_SHADOW_DY_DP = 2f
-private const val CLIPPING_FREE_SHADOW_RADIUS_MULTIPLIER = 1.4f
 
 @Composable
 fun totalCartesianColumnLayer(@ColorRes colorIds: List<Int>): ColumnCartesianLayer {
@@ -315,16 +315,15 @@ fun DailyChart(
                 LineCartesianLayer.LineProvider.series(
                     colors.map {
                         colorResource(id = it).let { color ->
-                            val bg = if (solidColor){
-                                DynamicShader.color(color)
+                            val backgroundColors = if (solidColor){
+                                val palerColor: Int = ArgbEvaluator().evaluate(0.5f, color.toArgb(), Color.White.toArgb())!! as Int
+                                listOf(color, Color(color = palerColor))
                             } else {
-                                BrushShader(Brush.verticalGradient(
-                                    listOf(color.copy(alpha = 0.5f), color.copy(alpha = 0f)))
-                                )
+                                listOf(color.copy(alpha = 0.5f), color.copy(alpha = 0f))
                             }
                             rememberLine(
                                 shader = DynamicShader.color(color),
-                                backgroundShader = bg,
+                                backgroundShader = BrushShader(Brush.verticalGradient(backgroundColors)),
                             )
                         }
                                },
