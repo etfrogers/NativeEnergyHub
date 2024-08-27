@@ -4,6 +4,7 @@ import com.etfrogers.ecoforestklient.ChunkClass
 import com.etfrogers.ecoforestklient.DayData
 import com.etfrogers.ecoforestklient.EcoForestClient
 import com.etfrogers.ecoforestklient.EcoforestStatus
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 
@@ -29,7 +30,7 @@ class EcoForestModel(
 }
 
 data class HeatPumpDay(
-    val timestamps: List<OffsetDateTime> = listOf(),
+    val timestamps: List<Instant> = listOf(),
     val outdoorTemp: List<Float> = listOf(),
     val heatingPower: List<Float> = listOf(),
     val dhwPower: List<Float> = listOf(),
@@ -45,7 +46,7 @@ data class HeatPumpDay(
     companion object {
         fun fromDayData(data: DayData, timezone: TimeZone): HeatPumpDay {
             return HeatPumpDay(
-                timestamps = data.timestamps.toOffsetDateTime(timezone),
+                timestamps = data.timestamps,
                 outdoorTemp = data.outdoorTemp,
                 heatingPower = data.getPowerSeries(ChunkClass.heatingTypes()) * 1000,
                 dhwPower = data.getPowerSeries(ChunkClass.dhwTypes()) * 1000,

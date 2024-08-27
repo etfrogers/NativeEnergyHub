@@ -16,12 +16,10 @@ import com.example.energyhub.model.ErrorType
 import com.example.energyhub.model.HeatPumpDay
 import com.example.energyhub.model.MyEnergiHistory
 import com.example.energyhub.model.MyEnergiModel
-import com.example.energyhub.model.OffsetDateTime
 import com.example.energyhub.model.Resource
 import com.example.energyhub.model.SolarEdgeModel
 import com.example.energyhub.model.SolarHistory
 import com.example.energyhub.model.div
-import com.example.energyhub.model.integratePowers
 import com.example.energyhub.model.mapInPlace
 import com.example.energyhub.model.plus
 import com.example.energyhub.model.minus
@@ -162,41 +160,60 @@ class HistoryViewModel(
         val refTimestamps = solar.timestamps
 
         val carChargePower = normaliseToTimestamps(
-            refTimestamps, diverter.zappi.timestamps, diverter.zappi.totalPower)
+            refTimestamps,
+            diverter.zappi.timestamps,
+            diverter.zappi.totalPower,
+            timezone,
+        )
         val immersionPower = normaliseToTimestamps(
-            refTimestamps, diverter.eddi.timestamps, diverter.eddi.totalPower)
-        val dhwPower = normaliseToTimestamps(refTimestamps, heatPump.timestamps, heatPump.dhwPower)
+            refTimestamps, diverter.eddi.timestamps,
+            diverter.eddi.totalPower,
+            timezone,
+        )
+        val dhwPower = normaliseToTimestamps(
+            refTimestamps, heatPump.timestamps,
+            heatPump.dhwPower,
+            timezone
+        )
         val heatingPower = normaliseToTimestamps(
             refTimestamps, heatPump.timestamps,
-            heatPump.heatingPower
+            heatPump.heatingPower,
+            timezone,
         )
         val legionnairesPower = normaliseToTimestamps(
             refTimestamps, heatPump.timestamps,
-            heatPump.legionnairesPower
+            heatPump.legionnairesPower,
+            timezone,
         )
         val combinedPower = normaliseToTimestamps(
             refTimestamps, heatPump.timestamps,
-            heatPump.combinedPower
+            heatPump.combinedPower,
+            timezone,
         )
         val unknownHeatPumpPower = normaliseToTimestamps(
             refTimestamps, heatPump.timestamps,
-            heatPump.unknownPower
+            heatPump.unknownPower,
+            timezone,
         )
         val batteryGridCharging = normaliseToTimestamps(
             refTimestamps, battery.timestamps,
-            battery.chargePowerFromGrid
+            battery.chargePowerFromGrid,
+            timezone,
         )
         val batterySolarCharging = normaliseToTimestamps(
             refTimestamps, battery.timestamps,
-            battery.chargePowerFromSolar
+            battery.chargePowerFromSolar,
+            timezone,
         )
         val batteryDischarging = normaliseToTimestamps(
             refTimestamps, battery.timestamps,
-            battery.dischargePower
+            battery.dischargePower,
+            timezone,
         )
         val batteryStateFull = normaliseToTimestamps(
             refTimestamps, battery.timestamps,
-            battery.chargePercentage
+            battery.chargePercentage,
+            timezone,
         )
         val batteryState = if (battery.timestamps.isEmpty()) {
             listOf()
@@ -320,13 +337,14 @@ enum class NormalisationMode {
 }
 
 private fun normaliseToTimestamps(
-    refTimestamps: List<OffsetDateTime>,
-    dataTimestamps: List<OffsetDateTime>,
+    refTimestamps: List<Instant>,
+    dataTimestamps: List<Instant>,
     data: List<Float>,
-    mode: NormalisationMode = NormalisationMode.PRECEDING,
-    ): List<Float> {
-    val refHours = refTimestamps.toHours()
-    val dataHours = dataTimestamps.toHours()
+    timezone: TimeZone,
+    mode: NormalisationMode = NormalisationMode.PRECEDING
+): List<Float> {
+    val refHours = refTimestamps.toHours(timezone)
+    val dataHours = dataTimestamps.toHours(timezone)
     val binEdges = when (mode) {
         NormalisationMode.MIDPOINT -> refHours.drop(1).zip(refHours.dropLast(1)).map { (z, e) -> (z+e)/2 }
         NormalisationMode.PRECEDING -> refHours.drop(1)
@@ -371,7 +389,7 @@ private fun bincount(binIndices: List<Int>, weights: List<Float>,  minLength: In
 fun EmptyBattery() = Battery("", 0f, "", 0, Telemetry())
 
 data class HistoryUiState(
-    val timestamps: List<OffsetDateTime> = listOf(),
+    val timestamps: List<Instant> = listOf(),
     val totalSelfConsumptionEnergy: Float = 0f,
     val netBatteryChargeFromSolar: Float = 0f,
     val totalBatteryDischargeEnergy: Float = 0f,
@@ -408,5 +426,5 @@ data class HistoryUiState(
     val timezone: TimeZone,
     val date: LocalDate,
 ){
-    val fractionalHours: List<Float> by lazy { timestamps.toHours() }
+    val fractionalHours: List<Float> by lazy { timestamps.toHours(timezone) }
 }

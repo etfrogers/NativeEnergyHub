@@ -1,5 +1,6 @@
 package com.example.energyhub.model
 
+import kotlinx.datetime.Instant
 import kotlin.time.Duration.Companion.minutes
 
 private fun assertEqualSizes(l1: List<Any>, l2: List<Any>){
@@ -57,7 +58,7 @@ fun List<List<Number>>.sum(): List<Float>{
     return total.toList()
 }
 
-fun integratePowers(powers: List<Float>, timestamps: List<OffsetDateTime>): Float {
+fun integratePowers(powers: List<Float>, timestamps: List<Instant>): Float {
     if (powers.size != timestamps.size){
         throw IllegalArgumentException("Powers and timestamps must be the same size")
     }
@@ -68,7 +69,7 @@ fun integratePowers(powers: List<Float>, timestamps: List<OffsetDateTime>): Floa
     val gapsHours = timestamps.drop(1)
         .zip(timestamps.dropLast(1)).map {
                 (t1, t2) ->
-            (t2.toInstant()-t1.toInstant()).inWholeHours
+            (t2-t1).inWholeHours
     }.toMutableList()
     // assume first entry is the standard 5-minute interval.
     gapsHours.add(0,  5.minutes.inWholeHours)

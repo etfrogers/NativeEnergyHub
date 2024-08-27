@@ -6,8 +6,10 @@ import com.etfrogers.myenergiklient.HourData
 import com.etfrogers.myenergiklient.MyEnergiClient
 import com.etfrogers.myenergiklient.MyEnergiSystem
 import com.etfrogers.myenergiklient.Zappi
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 class MyEnergiModel(
     username: String,
@@ -46,8 +48,9 @@ class MyEnergiModel(
 
 fun DetailHistory.meanVoltagePerHour(): Map<Int, Double> {
     return (0..24).associateWith { hour ->
-        val meanV = this.voltage.filterIndexed { i, v -> this.timestamps[i].hour == hour }.average()
-        meanV
+        this.voltage.filterIndexed { i, _ ->
+            this.timestamps[i].toLocalDateTime(TimeZone.UTC).hour == hour
+        }.average()
     }
 }
 
@@ -99,7 +102,7 @@ data class MyEnergiHistory(
 )
 
 data class MyEnergiDeviceHistory(
-    val timestamps: List<OffsetDateTime> = listOf(),
+    val timestamps: List<Instant> = listOf(),
     val voltage: List<Float> = listOf(),
     val frequency: List<Float> = listOf(),
     val importPower: List<Float> = listOf(),
@@ -117,7 +120,7 @@ data class MyEnergiDeviceHistory(
         fun fromMinuteHourData(data: DetailHistory, hourData: HourData, timezone: TimeZone): MyEnergiDeviceHistory {
             val energyData = hourData.toEnergies(data.meanVoltagePerHour())
             return MyEnergiDeviceHistory(
-                timestamps = data.timestamps.toOffsetDateTime(timezone),
+                timestamps = data.timestamps,
                 voltage = data.voltage,
                 frequency = data.frequency,
                 importPower = data.importPower,

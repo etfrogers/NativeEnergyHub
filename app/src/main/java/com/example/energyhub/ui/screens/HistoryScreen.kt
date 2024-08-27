@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.energyhub.R
-import com.example.energyhub.model.OffsetDateTime
 import com.example.energyhub.ui.theme.EnergyHubTheme
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
@@ -55,6 +54,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
 import kotlinx.datetime.format.char
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.todayIn
 import kotlin.math.floor
 import kotlin.math.round
@@ -451,11 +451,14 @@ fun PreviewHistory() {
         val ones = (Array(hrs.size) { 1f }).toList()
         ChartLayout(HistoryUiState(
             timestamps = hrs.map {
-                    OffsetDateTime(
-                        LocalDateTime(2024, 6, 1,
-                            floor(it).toInt(), round(frac(it)*60).toInt(), 0),
-                        TimeZone.UTC)
-                                     },
+                        LocalDateTime(
+                            2024,
+                            6,
+                            1,
+                            floor(it).toInt(),
+                            round(frac(it)*60).toInt(),
+                            0).toInstant(TimeZone.UTC)
+                                 },
             batteryPercentage = hrs.map { it*100f/24f },
             carChargePower = ones,
             immersionPower = ones,
@@ -466,6 +469,14 @@ fun PreviewHistory() {
             unknownHeatPumpPower = ones,
             batteryGridCharging = ones,
             remainingLoad = ones,
+
+            batteryDischarging = ones,
+
+            solarConsumption = ones,
+            exportPower = ones,
+            importPower = ones,
+            batterySolarCharging = ones,
+
             timezone = TimeZone.UTC,//TimeZone.of("Europe/London"),
             date = LocalDate(2024, 3, 1),
         ),

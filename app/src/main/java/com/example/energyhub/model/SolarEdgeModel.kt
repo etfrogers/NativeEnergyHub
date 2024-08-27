@@ -3,6 +3,7 @@ package com.example.energyhub.model
 import com.etfrogers.ksolaredge.SolarEdgeApi
 import com.etfrogers.ksolaredge.serialisers.Connection
 import com.etfrogers.ksolaredge.serialisers.StorageData
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 
@@ -73,7 +74,7 @@ class SolarEdgeModel(
 
     suspend fun getBatteryHistoryForDate(date: LocalDate): Resource<BatteryHistory> {
         return wrapAsResource("Battery History") {
-            BatteryHistory.fromStorageData(client.getBatteryHistoryForDay(date), timezone)
+            BatteryHistory.fromStorageData(client.getBatteryHistoryForDay(date))
         }
     }
 
@@ -95,7 +96,7 @@ class SolarEdgeModel(
         val powerMeters = powerData.meters
         val n = powerMeters.timestamps.size
         return SolarHistory(
-            timestamps = powerMeters.timestamps.toOffsetDateTime(timezone),
+            timestamps = powerMeters.timestamps,
             import = nullToZero(powerMeters.purchased, n),
             consumption = nullToZero(powerMeters.consumption, n),
             generation = nullToZero(powerMeters.production, n),
@@ -113,7 +114,7 @@ fun nullToZero(list: List<Float?>?, length: Int): List<Float>{
 }
 
 data class SolarHistory(
-    val timestamps: List<OffsetDateTime> = listOf(),
+    val timestamps: List<Instant> = listOf(),
     val export: List<Float> = listOf(),
     val consumption: List<Float> = listOf(),
     val generation: List<Float> = listOf(),
@@ -125,7 +126,7 @@ data class SolarHistory(
 )
 
 data class BatteryHistory(
-    val timestamps: List<OffsetDateTime> = listOf(),
+    val timestamps: List<Instant> = listOf(),
     val chargePowerFromGrid: List<Float> = listOf(),
     val chargeEnergyFromGrid: List<Float> = listOf(),
     val chargePowerFromSolar: List<Float> = listOf(),
@@ -134,13 +135,13 @@ data class BatteryHistory(
     val storedEnergy: List<Float> = listOf(),
 ) {
     companion object {
-        fun fromStorageData(data: StorageData, timezone: TimeZone): BatteryHistory {
+        fun fromStorageData(data: StorageData): BatteryHistory {
             if (data.batteries.size != 1) {
                 throw NotImplementedError("History of multiple batteries not implemented")
             }
             val telemetry = data.batteries.first().telemetry
             return BatteryHistory(
-                telemetry.timestamps.toOffsetDateTime(timezone),
+                telemetry.timestamps,
                 telemetry.chargePowerFromGrid,
                 telemetry.chargeEnergyFromGrid,
                 telemetry.chargePowerFromSolar,

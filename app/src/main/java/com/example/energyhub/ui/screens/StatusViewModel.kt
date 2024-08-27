@@ -4,9 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.CreationExtras
 import com.etfrogers.ecoforestklient.EcoforestStatus
 import com.etfrogers.ecoforestklient.UnitValue
 import com.etfrogers.myenergiklient.MyEnergiSystem
@@ -44,7 +42,7 @@ class StatusViewModel(
     init {
         Log.d(TAG, "Initialising...")
         Timer().schedule(timerTask {
-            refreshSolar()
+//            refreshSolar()
             refreshDiverter()
         },0,10_000)
         Timer().schedule(timerTask {
