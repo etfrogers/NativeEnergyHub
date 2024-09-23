@@ -34,4 +34,16 @@ object ViewModelFactory {
             ) as T
         }
     }
+
+    val PlanningFactory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(
+            modelClass: Class<T>,
+            extras: CreationExtras,
+        ): T {
+            @Suppress("UNCHECKED_CAST")
+            return PlanningViewModel(
+                timezone = SystemModel.timezone
+            ) as T
+        }
+    }
 }
